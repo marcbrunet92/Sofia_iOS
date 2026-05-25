@@ -1,10 +1,3 @@
-//
-//  SofiaApp.swift
-//  Sofia
-//
-//  Created by Marc Brunet on 23/05/2026.
-//
-
 import SwiftUI
 
 @main
