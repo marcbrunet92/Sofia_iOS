@@ -19,14 +19,15 @@ enum APIError: LocalizedError {
 actor SofiaAPIService {
     static let shared = SofiaAPIService()
 
-    private let baseURL = "https://sofia.lemarc.fr"
+    let baseURL = "https://sofia.lemarc.fr"
+
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
 
-            // Essai 1 : avec timezone (ex: "2026-05-24T00:00:00Z")
+            // Try ISO8601 with timezone first
             let withTZ = ISO8601DateFormatter()
             withTZ.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let date = withTZ.date(from: str) { return date }
@@ -35,7 +36,7 @@ actor SofiaAPIService {
             withTZNoFrac.formatOptions = [.withInternetDateTime]
             if let date = withTZNoFrac.date(from: str) { return date }
 
-            // Essai 2 : SANS timezone (ex: "2026-05-24T00:00:00") → on suppose UTC
+            // API returns dates without timezone → assume UTC
             let noTZ = DateFormatter()
             noTZ.locale = Locale(identifier: "en_US_POSIX")
             noTZ.timeZone = TimeZone(identifier: "UTC")
@@ -47,14 +48,6 @@ actor SofiaAPIService {
         }
         return d
     }()
-
-    // MARK: - Latest settlement period for a BMU
-    func latestSettlement(for bmuId: String) async throws -> PnLatestSettlementPeriod {
-        var components = URLComponents(string: "\(baseURL)/pn/latest-settlement-period")!
-        components.queryItems = [URLQueryItem(name: "bmu_id", value: bmuId)]
-        guard let url = components.url else { throw APIError.badURL }
-        return try await fetch(url: url)
-    }
 
     // MARK: - PN data for a BMU over a time range
     func pnData(bmuId: String, from: Date, to: Date) async throws -> [PnResponse] {
@@ -69,9 +62,11 @@ actor SofiaAPIService {
         return try await fetch(url: url)
     }
 
-    // MARK: - Date range of available data
-    func dateRange() async throws -> PnDateRange {
-        guard let url = URL(string: "\(baseURL)/pn/date-range") else { throw APIError.badURL }
+    // MARK: - Latest settlement period for a BMU
+    func latestSettlement(for bmuId: String) async throws -> PnLatestSettlementPeriod {
+        var components = URLComponents(string: "\(baseURL)/pn/latest-settlement-period")!
+        components.queryItems = [URLQueryItem(name: "bmu_id", value: bmuId)]
+        guard let url = components.url else { throw APIError.badURL }
         return try await fetch(url: url)
     }
 

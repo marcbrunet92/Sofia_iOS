@@ -4,46 +4,43 @@ import Charts
 struct ProductionChartView: View {
     @ObservedObject var vm: SofiaViewModel
 
-    // Drag offset (panning)
-    @State private var dragOffset: Double = 0      // in hours
-    @GestureState private var liveOffset: Double = 0
-
     private var points: [AggregatedPoint] { vm.visibleHistory }
 
     private var maxMW: Double {
-        (points.map(\.totalMw).max() ?? 500) * 1.15
+        max((points.map(\.totalMw).max() ?? 100) * 1.15, 10)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Title row
+        VStack(alignment: .leading, spacing: 10) {
+
+            // Header
             HStack {
                 Text("Production History")
                     .font(.system(.headline, design: .rounded))
-                    .foregroundStyle(.primary)
-
                 Spacer()
-
-                // Zoom control
-                HStack(spacing: 6) {
-                    Text("Window:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    ForEach([6.0, 24.0, 48.0, 168.0], id: \.self) { h in
+                // Window selector
+                HStack(spacing: 4) {
+                    ForEach([6.0, 24.0, 48.0, 168.0, 0.0], id: \.self) { h in
                         Button(hourLabel(h)) {
-                            withAnimation { vm.chartHours = h; dragOffset = 0 }
+                            withAnimation { vm.chartHours = h }
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.mini)
-                        .tint(vm.chartHours == h ? .blue : .gray)
+                        .font(.system(.caption2, design: .rounded, weight: .semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(vm.chartHours == h ? Color.blue : Color.blue.opacity(0.1),
+                                    in: Capsule())
+                        .foregroundStyle(vm.chartHours == h ? .white : .blue)
                     }
                 }
             }
 
             if points.isEmpty {
-                ContentUnavailableView("No data", systemImage: "waveform.slash",
-                    description: Text("No production data for this window"))
-                    .frame(height: 220)
+                ContentUnavailableView(
+                    "No data",
+                    systemImage: "waveform.slash",
+                    description: Text("No production data for this window")
+                )
+                .frame(height: 180)
             } else {
                 Chart(points) { pt in
                     AreaMark(
@@ -52,7 +49,7 @@ struct ProductionChartView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.blue.opacity(0.05)],
+                            colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.02)],
                             startPoint: .top, endPoint: .bottom
                         )
                     )
@@ -65,7 +62,7 @@ struct ProductionChartView: View {
                 }
                 .chartYScale(domain: 0...maxMW)
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: xStride)) { value in
+                    AxisMarks(values: .stride(by: xStride)) { _ in
                         AxisGridLine()
                         AxisTick()
                         AxisValueLabel(format: xFormat)
@@ -74,33 +71,35 @@ struct ProductionChartView: View {
                 .chartYAxis {
                     AxisMarks { value in
                         AxisGridLine()
-                        AxisValueLabel { Text("\(value.as(Double.self) ?? 0, specifier: "%.0f") MW") }
+                        AxisValueLabel {
+                            Text("\(value.as(Double.self) ?? 0, specifier: "%.0f") MW")
+                                .font(.system(.caption2, design: .monospaced))
+                        }
                     }
                 }
-                .frame(height: 220)
+                .frame(height: 200)
                 .chartScrollableAxes(.horizontal)
-                .padding(.vertical, 4)
             }
         }
-        .padding()
+        .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16)
+            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1))
     }
 
-    // MARK: - Helpers
     private func hourLabel(_ h: Double) -> String {
         switch h {
-        case 6:   return "6 h"
-        case 24:  return "24 h"
-        case 48:  return "48 h"
-        case 168: return "7 d"
-        default:  return "\(Int(h)) h"
+        case 6:   return "6h"
+        case 24:  return "24h"
+        case 48:  return "48h"
+        case 168: return "7d"
+        case 0:   return "All"
+        default:  return "\(Int(h))h"
         }
     }
 
     private var xStride: Calendar.Component {
-        vm.chartHours <= 12  ? .hour :
-        vm.chartHours <= 72  ? .hour :
-                               .day
+        vm.chartHours <= 24 ? .hour : .day
     }
 
     private var xFormat: Date.FormatStyle {
