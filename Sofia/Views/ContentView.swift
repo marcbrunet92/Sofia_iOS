@@ -1,39 +1,75 @@
 import SwiftUI
+import Charts
 
+// MARK: - Main app with tab navigation
 struct ContentView: View {
     @StateObject private var vm = SofiaViewModel()
+
+    var body: some View {
+        TabView {
+            DashboardView(vm: vm)
+                .tabItem {
+                    Label("Production", systemImage: "bolt.fill")
+                }
+
+            SettingsView(vm: vm)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+        }
+    }
+}
+
+// MARK: - Dashboard
+struct DashboardView: View {
+    @ObservedObject var vm: SofiaViewModel
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
 
-                    if let err = vm.errorMessage {
-                        HStack {
+                    // Test mode banner
+                    if vm.testMode {
+                        HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.yellow)
-                            Text(err).font(.caption)
+                                .foregroundStyle(.black)
+                            Text("TEST MODE — displaying T_HEYM11 only")
+                                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.black)
                             Spacer()
-                            Button("OK") { vm.errorMessage = nil }
-                                .font(.caption)
                         }
-                        .padding(10)
-                        .background(Color.yellow.opacity(0.15),
-                                    in: RoundedRectangle(cornerRadius: 10))
+                        .padding(12)
+                        .background(Color.yellow, in: RoundedRectangle(cornerRadius: 10))
                     }
 
-                    TotalProductionCard(vm: vm)
+                    // Error banner
+                    if let err = vm.errorMessage {
+                        HStack {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(err).font(.caption)
+                            Spacer()
+                            Button("OK") { vm.errorMessage = nil }.font(.caption)
+                        }
+                        .padding(10)
+                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                    }
 
-                    BMUGridView(vm: vm)
+                    // Ring + total
+                    ProductionRingCard(vm: vm)
 
+                    // Chart
                     ProductionChartView(vm: vm)
 
+                    // Timestamps
                     TimestampsView(vm: vm)
+                        .padding(.bottom, 8)
                 }
-                .padding(.horizontal, 16)   // ← les marges gauche/droite
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            .navigationTitle("Sofia Wind Farm")
+            .navigationTitle(vm.testMode ? "Test Mode" : "Sofia Wind Farm")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -49,114 +85,66 @@ struct ContentView: View {
                     .disabled(vm.isLoading)
                 }
             }
-            .task { await vm.refresh() }
         }
     }
 }
 
-// MARK: - Total production card
-struct TotalProductionCard: View {
+// MARK: - Ring + production card
+struct ProductionRingCard: View {
     @ObservedObject var vm: SofiaViewModel
-    private var capacityMW: Double { 1400 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("TOTAL PRODUCTION")
+        VStack(spacing: 20) {
+
+            // Ring gauge
+            ZStack {
+                // Background ring
+                Circle()
+                    .stroke(Color.blue.opacity(0.12), lineWidth: 22)
+                    .frame(width: 200, height: 200)
+
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: vm.capacityFactor)
+                    .stroke(
+                        AngularGradient(
+                            colors: [.cyan, .blue, .indigo],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
+                        style: StrokeStyle(lineWidth: 22, lineCap: .round)
+                    )
+                    .frame(width: 200, height: 200)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(duration: 1.0), value: vm.capacityFactor)
+
+                // Center text
+                VStack(spacing: 2) {
+                    Text(vm.totalMW, format: .number.precision(.fractionLength(1)))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+                    Text("MW")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Text(vm.capacityFactor, format: .percent.precision(.fractionLength(1)))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+
+            // Capacity label
+            Text("of \(Int(vm.capacityMW)) MW capacity")
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(.secondary)
-                .kerning(0.8)
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(vm.totalMW, format: .number.precision(.fractionLength(1)))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .contentTransition(.numericText())
-                Text("MW")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-            }
-
-            // Capacity bar
-            VStack(alignment: .leading, spacing: 4) {
-                let pct = min(vm.totalMW / capacityMW, 1.0)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.blue.opacity(0.15))
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(LinearGradient(
-                                colors: [.cyan, .blue],
-                                startPoint: .leading, endPoint: .trailing))
-                            .frame(width: geo.size.width * pct)
-                            .animation(.spring(), value: pct)
-                    }
-                }
-                .frame(height: 10)
-
-                Text("Capacity factor: \(pct, format: .percent.precision(.fractionLength(1)))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)  // ← prend toute la largeur
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16)
-            .strokeBorder(Color.blue.opacity(0.3), lineWidth: 1))
-    }
-}
-
-// MARK: - Per-BMU grid (2 colonnes fixes)
-struct BMUGridView: View {
-    @ObservedObject var vm: SofiaViewModel
-
-    let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(BMU.allCases, id: \.rawValue) { bmu in
-                BMUCard(name: bmu.displayName,
-                        mw: vm.perBMU[bmu.rawValue] ?? 0)
-            }
-        }
-    }
-}
-
-struct BMUCard: View {
-    let name: String
-    let mw: Double
-
-    private var statusColor: Color {
-        mw > 10 ? .green : mw > 0 ? .yellow : .gray
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: statusColor.opacity(0.8), radius: 4)
-                Text(name)
-                    .font(.system(.caption, design: .monospaced, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(mw, format: .number.precision(.fractionLength(1)))
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .contentTransition(.numericText())
-                Text("MW")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)  // ← important
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12)
-            .strokeBorder(statusColor.opacity(0.25), lineWidth: 1))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.blue.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -167,10 +155,18 @@ struct TimestampsView: View {
     var body: some View {
         VStack(spacing: 10) {
             timestampRow(icon: "antenna.radiowaves.left.and.right",
-                         label: "Données API", date: vm.lastAPIUpdate)
+                         label: "API data up to", date: vm.lastAPIUpdate)
             Divider()
             timestampRow(icon: "clock.arrow.circlepath",
-                         label: "Dernière mise à jour", date: vm.lastFetch)
+                         label: "Last fetch", date: vm.lastFetch)
+
+            HStack {
+                Circle().fill(Color.green).frame(width: 6, height: 6)
+                Text("Auto-refresh every 60 s")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
         }
         .padding(14)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -189,6 +185,70 @@ struct TimestampsView: View {
     }
 }
 
+// MARK: - Settings view
+struct SettingsView: View {
+    @ObservedObject var vm: SofiaViewModel
+    @State private var showVisual = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                // Test mode section
+                Section {
+                    Toggle(isOn: $vm.testMode) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Mode")
+                                .font(.body)
+                            Text("Use T_HEYM11 instead of Sofia BMUs")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.yellow)
+
+                    if vm.testMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            Text("Active — showing HEYM11 data only")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Mode")
+                } footer: {
+                    Text("In normal mode, the app aggregates the four Sofia BMUs (T_SOFOW-11/12/21/22) as a single 1400 MW wind farm. Test mode displays the adjacent T_HEYM11 unit, which has real production data while Sofia is under construction.")
+                }
+
+                // Visualisation section
+                Section("Visualisation") {
+                    Link(destination: URL(string: "https://sofia.lemarc.fr/visual/pn")!) {
+                        HStack {
+                            Image(systemName: "chart.xyaxis.line")
+                                .foregroundStyle(.blue)
+                            Text("Open full PN chart (browser)")
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                }
+
+                // About section
+                Section("About") {
+                    LabeledContent("API", value: "sofia.lemarc.fr")
+                    LabeledContent("Normal BMUs", value: "SOFOW-11/12/21/22")
+                    LabeledContent("Test BMU", value: "HEYM11")
+                    LabeledContent("Max capacity", value: "1400 MW")
+                }
+            }
+            .navigationTitle("Settings")
+        }
+    }
+}
+
 #Preview {
     ContentView()
-}	
+}

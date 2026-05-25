@@ -4,23 +4,30 @@ import Combine
 @MainActor
 class SofiaViewModel: ObservableObject {
 
+    // MARK: - Settings
+    @AppStorage("testMode") var testMode: Bool = false {
+        didSet { Task { await refresh() } }
+    }
+
+    var mode: AppMode { testMode ? .test : .normal }
+
     // MARK: - Published state
     @Published var totalMW: Double = 0
     @Published var perBMU: [String: Double] = [:]
     @Published var history: [AggregatedPoint] = []
 
-    @Published var lastAPIUpdate: Date?        // latest time_from across all BMUs
-    @Published var lastFetch: Date?            // when we last polled
+    @Published var lastAPIUpdate: Date?
+    @Published var lastFetch: Date?
 
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     // MARK: - Chart window
-    @Published var chartHours: Double = 48     // visible window in hours
+    @Published var chartHours: Double = 48
 
     // MARK: - Private
     private var timer: Timer?
-    private let refreshInterval: TimeInterval = 60   // poll every 60 s
+    private let refreshInterval: TimeInterval = 60
 
     // MARK: - Init
     init() {
@@ -36,27 +43,23 @@ class SofiaViewModel: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
 
-        do {
-            // 1. Find the time window: last 7 days up to now
-            let to   = Date()
-            let from = to.addingTimeInterval(-7 * 24 * 3600)
+        let bmuIds = mode.bmuIds
+        let to   = Date()
+        let from = Calendar.current.date(from: DateComponents(year: 2026, month: 4, day: 1))!
 
-            // 2. Fetch all BMUs in parallel
-            let bmuIds = BMU.allCases.map(\.rawValue)
-            async let results: [[PnResponse]] = withThrowingTaskGroup(of: [PnResponse].self) { group in
+        do {
+            let allData: [PnResponse] = try await withThrowingTaskGroup(of: [PnResponse].self) { group in
                 for bmu in bmuIds {
                     group.addTask {
                         (try? await SofiaAPIService.shared.pnData(bmuId: bmu, from: from, to: to)) ?? []
                     }
                 }
-                var all: [[PnResponse]] = []
-                for try await r in group { all.append(r) }
-                return all
+                var results: [PnResponse] = []
+                for try await r in group { results.append(contentsOf: r) }
+                return results
             }
 
-            let allData = try await results.flatMap { $0 }
-
-            // 3. Build per-BMU latest production
+            // Latest value per BMU
             var latestPerBMU: [String: PnResponse] = [:]
             for point in allData {
                 if let existing = latestPerBMU[point.bmuId] {
@@ -66,12 +69,12 @@ class SofiaViewModel: ObservableObject {
                 }
             }
             perBMU = latestPerBMU.mapValues(\.levelMw)
-            totalMW = perBMU.values.reduce(0, +)
 
-            // Latest time across all BMUs
+            // In normal mode, sum all 4 Sofia BMUs together as one farm
+            totalMW = perBMU.values.reduce(0, +)
             lastAPIUpdate = latestPerBMU.values.map(\.timeFrom).max()
 
-            // 4. Aggregate history by time bucket (sum all BMUs per settlement period)
+            // Aggregate history: sum all BMUs per time bucket
             var buckets: [Date: Double] = [:]
             for point in allData {
                 buckets[point.timeFrom, default: 0] += point.levelMw
@@ -87,15 +90,18 @@ class SofiaViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Filtered history for the chart window
+    // MARK: - Filtered history for chart window
     var visibleHistory: [AggregatedPoint] {
         guard !history.isEmpty else { return [] }
+        if chartHours == 0 { return history }
         let cutoff = Date().addingTimeInterval(-chartHours * 3600)
         let filtered = history.filter { $0.time >= cutoff }
         return filtered.isEmpty ? history : filtered
     }
+    var capacityMW: Double { mode.capacityMW }
 
-    // MARK: - Private helpers
+    var capacityFactor: Double { min(totalMW / capacityMW, 1.0) }
+
     private func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             guard let self else { return }
