@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import SofiaCore
 
 @MainActor
 class SofiaViewModel: ObservableObject {

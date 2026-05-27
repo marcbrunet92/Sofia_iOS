@@ -1,12 +1,12 @@
 import Foundation
 
-enum APIError: LocalizedError {
+public enum APIError: LocalizedError {
     case badURL
     case networkError(Error)
     case decodingError(Error)
     case serverError(Int)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .badURL:                  return "Invalid URL"
         case .networkError(let e):     return "Network error: \(e.localizedDescription)"
@@ -16,10 +16,10 @@ enum APIError: LocalizedError {
     }
 }
 
-actor SofiaAPIService {
-    static let shared = SofiaAPIService()
+public actor SofiaAPIService {
+    public static let shared = SofiaAPIService()
 
-    let baseURL = "https://sofia.lemarc.fr"
+    public let baseURL = "https://sofia.lemarc.fr"
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -27,7 +27,6 @@ actor SofiaAPIService {
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
 
-            // Try ISO8601 with timezone first
             let withTZ = ISO8601DateFormatter()
             withTZ.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let date = withTZ.date(from: str) { return date }
@@ -36,7 +35,6 @@ actor SofiaAPIService {
             withTZNoFrac.formatOptions = [.withInternetDateTime]
             if let date = withTZNoFrac.date(from: str) { return date }
 
-            // API returns dates without timezone → assume UTC
             let noTZ = DateFormatter()
             noTZ.locale = Locale(identifier: "en_US_POSIX")
             noTZ.timeZone = TimeZone(identifier: "UTC")
@@ -49,8 +47,10 @@ actor SofiaAPIService {
         return d
     }()
 
+    public init() {}
+
     // MARK: - PN data for a BMU over a time range
-    func pnData(bmuId: String, from: Date, to: Date) async throws -> [PnResponse] {
+    public func pnData(bmuId: String, from: Date, to: Date) async throws -> [PnResponse] {
         let fmt = ISO8601DateFormatter()
         fmt.formatOptions = [.withInternetDateTime]
         var components = URLComponents(string: "\(baseURL)/pn/\(bmuId)")!
@@ -63,7 +63,7 @@ actor SofiaAPIService {
     }
 
     // MARK: - Latest settlement period for a BMU
-    func latestSettlement(for bmuId: String) async throws -> PnLatestSettlementPeriod {
+    public func latestSettlement(for bmuId: String) async throws -> PnLatestSettlementPeriod {
         var components = URLComponents(string: "\(baseURL)/pn/latest-settlement-period")!
         components.queryItems = [URLQueryItem(name: "bmu_id", value: bmuId)]
         guard let url = components.url else { throw APIError.badURL }

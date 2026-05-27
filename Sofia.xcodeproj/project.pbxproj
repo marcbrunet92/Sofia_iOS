@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4967FD3D2FC759340098E81F /* SofiaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4967FD3C2FC759340098E81F /* SofiaCore */; };
+		4967FD3F2FC7593C0098E81F /* SofiaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4967FD3E2FC7593C0098E81F /* SofiaCore */; };
 		49FAD0412FC6126000342B8C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49FAD0402FC6125F00342B8C /* WidgetKit.framework */; };
 		49FAD0432FC6126000342B8C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49FAD0422FC6126000342B8C /* SwiftUI.framework */; };
 		49FAD04E2FC6126200342B8C /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 49FAD03E2FC6125F00342B8C /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -74,6 +76,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4967FD3D2FC759340098E81F /* SofiaCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +86,7 @@
 			files = (
 				49FAD0432FC6126000342B8C /* SwiftUI.framework in Frameworks */,
 				49FAD0412FC6126000342B8C /* WidgetKit.framework in Frameworks */,
+				4967FD3F2FC7593C0098E81F /* SofiaCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,6 +143,7 @@
 			);
 			name = Sofia;
 			packageProductDependencies = (
+				4967FD3C2FC759340098E81F /* SofiaCore */,
 			);
 			productName = Sofia;
 			productReference = 490742F52FC19EE300C47A83 /* Sofia.app */;
@@ -161,6 +166,7 @@
 			);
 			name = WidgetExtension;
 			packageProductDependencies = (
+				4967FD3E2FC7593C0098E81F /* SofiaCore */,
 			);
 			productName = WidgetExtension;
 			productReference = 49FAD03E2FC6125F00342B8C /* WidgetExtension.appex */;
@@ -193,6 +199,9 @@
 			);
 			mainGroup = 490742EC2FC19EE300C47A83;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4967FD3B2FC759050098E81F /* XCLocalSwiftPackageReference "SofiaCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 490742F62FC19EE300C47A83 /* Products */;
 			projectDirPath = "";
@@ -527,6 +536,26 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		4967FD3B2FC759050098E81F /* XCLocalSwiftPackageReference "SofiaCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SofiaCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4967FD3C2FC759340098E81F /* SofiaCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4967FD3B2FC759050098E81F /* XCLocalSwiftPackageReference "SofiaCore" */;
+			productName = SofiaCore;
+		};
+		4967FD3E2FC7593C0098E81F /* SofiaCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4967FD3B2FC759050098E81F /* XCLocalSwiftPackageReference "SofiaCore" */;
+			productName = SofiaCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 490742ED2FC19EE300C47A83 /* Project object */;
 }
