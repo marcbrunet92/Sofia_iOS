@@ -35,8 +35,8 @@ struct RemitRowView: View {
                     .foregroundStyle(.secondary)
                 }
 
-                if let reduction = remit.capacityReductionMw {
-                    Label("\(Int(reduction)) MW reduction", systemImage: "arrow.down.circle")
+                if let available = remit.availableCapacityMw {
+                    Label("\(Int(available)) MW available", systemImage: "arrow.down.circle")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
