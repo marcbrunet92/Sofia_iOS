@@ -11,6 +11,11 @@ struct ContentView: View {
                 .tabItem {
                     Label("Production", systemImage: "bolt.fill")
                 }
+            
+            RemitView(vm: vm)
+                .tabItem {
+                    Label("Remit", systemImage: "exclamationmark.triangle.fill")
+                }
 
             SettingsView(vm: vm)
                 .tabItem {

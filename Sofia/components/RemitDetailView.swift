@@ -1,5 +1,5 @@
-
-// MARK: - Detail
+import SofiaCore
+import SwiftUI
 
 struct RemitDetailView: View {
     let remit: RemitResponse

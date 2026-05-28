@@ -67,6 +67,9 @@ class SofiaViewModel: ObservableObject {
             history = allData.aggregatedHistory()
 
             lastFetch = Date()
+            
+            await refreshRemits()
+
 
         } catch {
             errorMessage = error.localizedDescription
@@ -89,6 +92,31 @@ class SofiaViewModel: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { await self.refresh() }
+        }
+    }
+    
+    @Published var remits: [RemitResponse] = []
+    @Published var isLoadingRemits = false
+    @Published var remitError: String?
+
+    func refreshRemits() async {
+        isLoadingRemits = true
+        remitError = nil
+        defer { isLoadingRemits = false }
+
+        do {
+            var all: [RemitResponse] = []
+            for bmuId in mode.bmuIds {
+                let results = (try? await SofiaAPIService.shared.listRemits(bmuId: bmuId, limit: 100)) ?? []
+                all.append(contentsOf: results)
+            }
+            // Sort: active first, then by most recent publish time
+            remits = all.sorted {
+                if $0.isCurrentlyActive != $1.isCurrentlyActive { return $0.isCurrentlyActive }
+                return ($0.publishTime ?? .distantPast) > ($1.publishTime ?? .distantPast)
+            }
+        } catch {
+            remitError = error.localizedDescription
         }
     }
 }
