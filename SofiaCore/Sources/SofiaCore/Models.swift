@@ -15,7 +15,7 @@ public enum AppMode {
     public var capacityMW: Double {
         switch self {
         case .normal: return 1400
-        case .test:   return 1400  // HEYM11 rated capacity
+        case .test:   return 1400
         }
     }
 
@@ -28,6 +28,7 @@ public enum AppMode {
 }
 
 // MARK: - API Models
+
 public struct PnResponse: Codable, Identifiable {
     public var id: String { "\(bmuId)-\(timeFrom)" }
     public let bmuId: String
@@ -84,7 +85,71 @@ public struct PnDateRange: Codable {
     }
 }
 
+// MARK: - REMIT
+
+public struct RemitResponse: Codable, Identifiable {
+    public let id: Int
+    public let mrid: String
+    public let revisionNumber: Int
+    public let bmuId: String
+    public let participantId: String
+    public let assetId: String
+    public let unavailabilityType: String
+    public let eventType: String
+    public let messageHeading: String
+    public let fuelType: String
+    public let normalCapacityMw: Double?
+    public let availableCapacityMw: Double?
+    public let unavailableCapacityMw: Double?
+    public let eventStatus: String
+    public let eventStartTime: Date?
+    public let eventEndTime: Date?
+    public let cause: String
+    public let relatedInformation: String
+    public let publishTime: Date?
+    public let outageProfile: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case mrid
+        case revisionNumber        = "revision_number"
+        case bmuId                 = "bmu_id"
+        case participantId         = "participant_id"
+        case assetId               = "asset_id"
+        case unavailabilityType    = "unavailability_type"
+        case eventType             = "event_type"
+        case messageHeading        = "message_heading"
+        case fuelType              = "fuel_type"
+        case normalCapacityMw      = "normal_capacity_mw"
+        case availableCapacityMw   = "available_capacity_mw"
+        case unavailableCapacityMw = "unavailable_capacity_mw"
+        case eventStatus           = "event_status"
+        case eventStartTime        = "event_start_time"
+        case eventEndTime          = "event_end_time"
+        case cause
+        case relatedInformation    = "related_information"
+        case publishTime           = "publish_time"
+        case outageProfile         = "outage_profile"
+    }
+
+    /// True when the event window overlaps the current moment.
+    public var isCurrentlyActive: Bool {
+        let now = Date()
+        let start = eventStartTime ?? .distantPast
+        let end   = eventEndTime   ?? .distantFuture
+        return start <= now && now <= end
+    }
+
+    /// Capacity reduction described by this REMIT notice, if both fields are present.
+    public var capacityReductionMw: Double? {
+        guard let normal = normalCapacityMw,
+              let available = availableCapacityMw else { return unavailableCapacityMw }
+        return normal - available
+    }
+}
+
 // MARK: - Aggregated point for the chart
+
 public struct AggregatedPoint: Identifiable {
     public let id = UUID()
     public let time: Date
