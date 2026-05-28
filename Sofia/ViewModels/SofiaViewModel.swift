@@ -61,28 +61,10 @@ class SofiaViewModel: ObservableObject {
             }
 
             // Latest value per BMU
-            var latestPerBMU: [String: PnResponse] = [:]
-            for point in allData {
-                if let existing = latestPerBMU[point.bmuId] {
-                    if point.timeFrom > existing.timeFrom { latestPerBMU[point.bmuId] = point }
-                } else {
-                    latestPerBMU[point.bmuId] = point
-                }
-            }
+            let latestPerBMU = allData.latestPerBMU()
             perBMU = latestPerBMU.mapValues(\.levelMw)
-
-            // In normal mode, sum all 4 Sofia BMUs together as one farm
             totalMW = perBMU.values.reduce(0, +)
-            lastAPIUpdate = latestPerBMU.values.map(\.timeFrom).max()
-
-            // Aggregate history: sum all BMUs per time bucket
-            var buckets: [Date: Double] = [:]
-            for point in allData {
-                buckets[point.timeFrom, default: 0] += point.levelMw
-            }
-            history = buckets
-                .map { AggregatedPoint(time: $0.key, totalMw: $0.value) }
-                .sorted { $0.time < $1.time }
+            history = allData.aggregatedHistory()
 
             lastFetch = Date()
 
