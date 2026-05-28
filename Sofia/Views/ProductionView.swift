@@ -40,7 +40,12 @@ struct DashboardView: View {
 
                     // Chart
                     ProductionChartView(vm: vm)
-
+                    
+                    RecordsCardView(
+                        windows: vm.topProduction,
+                        isLoading: vm.isLoadingRecords
+                    )
+                    
                     // Timestamps
                     TimestampsView(vm: vm)
                         .padding(.bottom, 8)

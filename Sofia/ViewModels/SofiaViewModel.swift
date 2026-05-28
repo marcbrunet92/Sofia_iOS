@@ -70,6 +70,7 @@ class SofiaViewModel: ObservableObject {
             
             await refreshRemits()
 
+            await refreshTopProduction()
 
         } catch {
             errorMessage = error.localizedDescription
@@ -118,5 +119,14 @@ class SofiaViewModel: ObservableObject {
         } catch {
             remitError = error.localizedDescription
         }
+    }
+    // MARK: - Records
+    @Published var topProduction: PnTopProductionWindows?
+    @Published var isLoadingRecords = false
+
+    func refreshTopProduction() async {
+        isLoadingRecords = true
+        defer { isLoadingRecords = false }
+        topProduction = try? await SofiaAPIService.shared.topProduction()
     }
 }

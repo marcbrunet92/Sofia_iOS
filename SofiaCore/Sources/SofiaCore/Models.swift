@@ -160,3 +160,43 @@ public struct AggregatedPoint: Identifiable {
         self.totalMw = totalMw
     }
 }
+// MARK: - Top Production (records)
+
+public struct PnTopProductionPoint: Codable {
+    public let maxMw: Double
+    public let maxDate: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case maxMw   = "max_mw"
+        case maxDate = "max_date"
+    }
+
+    public init(maxMw: Double, maxDate: Date?) {
+        self.maxMw   = maxMw
+        self.maxDate = maxDate
+    }
+}
+
+public struct PnTopProductionWindows: Codable {
+    public let allTime:    PnTopProductionPoint
+    public let last7Days:  PnTopProductionPoint
+    public let last30Days: PnTopProductionPoint
+    public let last90Days: PnTopProductionPoint
+
+    enum CodingKeys: String, CodingKey {
+        case allTime    = "all_time"
+        case last7Days  = "last_7_days"
+        case last30Days = "last_30_days"
+        case last90Days = "last_90_days"
+    }
+
+    public init(allTime: PnTopProductionPoint,
+                last7Days: PnTopProductionPoint,
+                last30Days: PnTopProductionPoint,
+                last90Days: PnTopProductionPoint) {
+        self.allTime    = allTime
+        self.last7Days  = last7Days
+        self.last30Days = last30Days
+        self.last90Days = last90Days
+    }
+}

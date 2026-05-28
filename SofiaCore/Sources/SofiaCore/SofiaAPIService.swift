@@ -71,7 +71,23 @@ public actor SofiaAPIService {
         guard let url = components.url else { throw APIError.badURL }
         return try await fetch(url: url)
     }
+    // MARK: - PN: date range available in the database
 
+    public func pnDateRange() async throws -> PnDateRange {
+        guard let url = URL(string: "\(baseURL)/pn/date-range") else {
+            throw APIError.badURL
+        }
+        return try await fetch(url: url)
+    }
+
+    // MARK: - PN: all-time / 7d / 30d / 90d production records
+
+    public func topProduction() async throws -> PnTopProductionWindows {
+        guard let url = URL(string: "\(baseURL)/pn/top-production") else {
+            throw APIError.badURL
+        }
+        return try await fetch(url: url)
+    }
     // MARK: - REMIT: list with optional filters
 
     /// Fetches a paginated list of REMIT notices.
