@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		4967FD3D2FC759340098E81F /* SofiaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4967FD3C2FC759340098E81F /* SofiaCore */; };
 		4967FD3F2FC7593C0098E81F /* SofiaCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4967FD3E2FC7593C0098E81F /* SofiaCore */; };
+		49EEFB322FDB633400AFA332 /* marc.sh in Resources */ = {isa = PBXBuildFile; fileRef = 49EEFB312FDB632B00AFA332 /* marc.sh */; };
 		49FAD0412FC6126000342B8C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49FAD0402FC6125F00342B8C /* WidgetKit.framework */; };
 		49FAD0432FC6126000342B8C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49FAD0422FC6126000342B8C /* SwiftUI.framework */; };
 		49FAD04E2FC6126200342B8C /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 49FAD03E2FC6125F00342B8C /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -40,6 +41,7 @@
 
 /* Begin PBXFileReference section */
 		490742F52FC19EE300C47A83 /* Sofia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sofia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		49EEFB312FDB632B00AFA332 /* marc.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = marc.sh; sourceTree = "<group>"; };
 		49FAD03E2FC6125F00342B8C /* WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		49FAD0402FC6125F00342B8C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		49FAD0422FC6126000342B8C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -59,6 +61,11 @@
 		490742F72FC19EE300C47A83 /* Sofia */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Sofia;
+			sourceTree = "<group>";
+		};
+		49188DFC2FDB65BD00B162AB /* dev */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = dev;
 			sourceTree = "<group>";
 		};
 		49FAD0442FC6126000342B8C /* Widget */ = {
@@ -96,6 +103,8 @@
 		490742EC2FC19EE300C47A83 = {
 			isa = PBXGroup;
 			children = (
+				49188DFC2FDB65BD00B162AB /* dev */,
+				49EEFB312FDB632B00AFA332 /* marc.sh */,
 				490742F72FC19EE300C47A83 /* Sofia */,
 				49FAD0442FC6126000342B8C /* Widget */,
 				49FAD03F2FC6125F00342B8C /* Frameworks */,
@@ -140,6 +149,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				490742F72FC19EE300C47A83 /* Sofia */,
+				49188DFC2FDB65BD00B162AB /* dev */,
 			);
 			name = Sofia;
 			packageProductDependencies = (
@@ -218,6 +228,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49EEFB322FDB633400AFA332 /* marc.sh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
