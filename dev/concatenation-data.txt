@@ -1,0 +1,956 @@
+marc@Marcs-Mac-mini Sofia % cd /Users/marc/StudioProjects/Sofia_Android/app/src/main/java/com/lemarc/sofia/data
+marc@Marcs-Mac-mini data % tree
+.
+├── api
+│   └── SofiaApiService.kt
+├── local
+│   ├── Entities.kt
+│   ├── SofiaDatabase.kt
+│   └── dao
+│       └── SofiaDao.kt
+├── model
+│   └── Model.kt
+├── repository
+│   ├── SofiaB1610Repository.kt
+│   ├── SofiaProductionRepository.kt
+│   ├── SofiaRemitRepository.kt
+│   └── SofiaWeatherRepository.kt
+├── settings
+│   └── SettingsRepository.kt
+└── utils.kt
+
+7 directories, 11 files
+marc@Marcs-Mac-mini data %
+
+===== Fichier: settings/SettingsRepository.kt =====
+
+package com.lemarc.sofia.data.settings
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import com.lemarc.sofia.TEST_MODE_KEY
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.dataStore by preferencesDataStore(name = "sofia_settings")
+
+class SettingsRepository(
+    private val context: Context,
+) {
+    val testMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[TEST_MODE_KEY] ?: false
+    }
+
+    suspend fun setTestMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[TEST_MODE_KEY] = enabled
+        }
+    }
+}
+
+===== Fichier: repository/SofiaB1610Repository.kt =====
+
+package com.lemarc.sofia.data.repository
+
+import com.lemarc.sofia.BASE_URL
+import com.lemarc.sofia.HISTORY_START
+import com.lemarc.sofia.SOFIA_BMUS
+import com.lemarc.sofia.TEST_BMU
+import com.lemarc.sofia.data.api.B1610EntryDto
+import com.lemarc.sofia.data.api.B1610TopProductionPointDto
+import com.lemarc.sofia.data.api.B1610TopProductionWindowsDto
+import com.lemarc.sofia.data.api.SofiaApiService
+import com.lemarc.sofia.data.model.B1610Snapshot
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.model.TopPoint
+import com.lemarc.sofia.data.model.TopWindows
+import com.lemarc.sofia.data.local.B1610PointEntity
+import com.lemarc.sofia.data.local.dao.SofiaDao
+import com.lemarc.sofia.util.parseApiInstant
+import com.lemarc.sofia.util.parseApiUtc
+import java.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.time.Duration
+
+class SofiaB1610Repository(
+    private val apiService: SofiaApiService,
+    private val sofiaDao: SofiaDao,
+) {
+    fun observeB1610(testMode: Boolean): Flow<B1610Snapshot> {
+        return sofiaDao.getB1610Points(testMode).map { entities ->
+            val points: List<GraphPoint> = entities.map { it.toModel() }
+            B1610Snapshot(
+                points = points,
+                latestDataTimestamp = points.lastOrNull()?.timeTo,
+                topB1610 = calculateTopB1610(points)
+            )
+        }
+    }
+
+    suspend fun refreshB1610(testMode: Boolean) = withContext(Dispatchers.IO) {
+        val requestedBmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
+        val (entries, topB1610) = coroutineScope {
+            val b1610Deferred = async {
+                requestedBmus.map { bmuId ->
+                    async {
+                        apiService.getB1610(
+                            bmuId = bmuId,
+                            timeFrom = HISTORY_START.toString(),
+                            timeTo = Instant.now().toString(),
+                        )
+                    }
+                }.awaitAll().flatten()
+            }
+            val topB1610Deferred = async {
+                runCatching { apiService.getB1610TopProduction() }
+                    .getOrNull()
+                    ?.toTopWindows()
+                    ?: TopWindows.Empty
+            }
+            b1610Deferred.await() to topB1610Deferred.await()
+        }
+
+        val aggregatedPoints = aggregateB1610(entries, testMode)
+        val entities: List<B1610PointEntity> = aggregatedPoints.map { it.toB1610Entity(testMode) }
+        sofiaDao.refreshB1610Points(testMode, entities)
+    }
+
+    companion object {
+        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaB1610Repository {
+            return SofiaB1610Repository(apiService, sofiaDao)
+        }
+    }
+}
+
+fun GraphPoint.toB1610Entity(testMode: Boolean): B1610PointEntity =
+    B1610PointEntity(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity,
+        isTestMode = testMode
+    )
+
+fun B1610PointEntity.toModel(): GraphPoint =
+    GraphPoint(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity
+    )
+
+fun calculateTopB1610(points: List<GraphPoint>): TopWindows {
+    if (points.isEmpty()) return TopWindows.Empty
+
+    fun findMax(filteredPoints: List<GraphPoint>): TopPoint {
+        val maxPoint = filteredPoints.maxByOrNull { it.quantity }
+        return TopPoint(
+            maxQuantity = maxPoint?.quantity ?: 0.0,
+            maxDate = maxPoint?.timeFrom
+        )
+    }
+
+    val now = Instant.now()
+    val last7Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(7)) }
+    val last30Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(30)) }
+    val last90Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(90)) }
+
+    return TopWindows(
+        allTime = findMax(points),
+        last7Days = findMax(last7Days),
+        last30Days = findMax(last30Days),
+        last90Days = findMax(last90Days)
+    )
+}
+
+internal fun aggregateB1610(
+    entries: List<B1610EntryDto>,
+    testMode: Boolean,
+): List<GraphPoint> {
+    if (entries.isEmpty()) return emptyList()
+    return entries
+        .groupBy { entry ->
+            Triple(entry.time_from, entry.time_to, entry.settlement_period)
+        }
+        .map { (_, groupedEntries) ->
+            val first = groupedEntries.first()
+            GraphPoint(
+                id = if (testMode) TEST_BMU else "SOFIA_TOTAL",
+                timeFrom = parseApiUtc(first.time_from),
+                timeTo = parseApiUtc(first.time_to),
+                quantity = groupedEntries.sumOf { it.quantity },
+            )
+        }
+        .sortedBy { it.timeFrom }
+}
+
+private fun B1610TopProductionWindowsDto.toTopWindows(): TopWindows =
+    TopWindows(
+        allTime = all_time.toTopPoint(),
+        last7Days = last_7_days.toTopPoint(),
+        last30Days = last_30_days.toTopPoint(),
+        last90Days = last_90_days.toTopPoint(),
+    )
+
+private fun B1610TopProductionPointDto.toTopPoint(): TopPoint =
+    TopPoint(
+        maxQuantity = quantity,
+        maxDate = parseApiInstant(max_date),
+    )
+
+===== Fichier: repository/SofiaWeatherRepository.kt =====
+
+package com.lemarc.sofia.data.repository
+
+import com.lemarc.sofia.HISTORY_START
+import com.lemarc.sofia.data.api.SofiaApiService
+import com.lemarc.sofia.data.api.WeatherEntryDto
+import com.lemarc.sofia.data.local.WeatherPointEntity
+import com.lemarc.sofia.data.local.dao.SofiaDao
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.model.WeatherSnapshot
+import com.lemarc.sofia.util.parseApiUtc
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.time.Instant
+
+class SofiaWeatherRepository(
+    private val apiService: SofiaApiService,
+    private val sofiaDao: SofiaDao,
+) {
+    fun observeWeather(): Flow<WeatherSnapshot> {
+        return sofiaDao.getWeatherPoints().map { entities ->
+            val points: List<GraphPoint> = entities.map { it.toModel() }
+            WeatherSnapshot(
+                points = points,
+                latestWindSpeed = points.lastOrNull()?.quantity,
+                latestDataTimestamp = points.lastOrNull()?.timeTo,
+            )
+        }
+    }
+
+    suspend fun refreshWeather() = withContext(Dispatchers.IO) {
+        val entries = apiService.getWeather(
+            timeFrom = HISTORY_START.toString(),
+            timeTo = Instant.now().toString(),
+        )
+        val points = entries.toGraphPoint()
+        val entities: List<WeatherPointEntity> = points.map { it.toWeatherEntity() }
+        sofiaDao.refreshWeatherPoints(entities)
+    }
+
+    companion object {
+        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaWeatherRepository {
+            return SofiaWeatherRepository(apiService, sofiaDao)
+        }
+    }
+}
+
+fun GraphPoint.toWeatherEntity(): WeatherPointEntity =
+    WeatherPointEntity(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity
+    )
+
+fun WeatherPointEntity.toModel(): GraphPoint =
+    GraphPoint(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity
+    )
+
+internal fun List<WeatherEntryDto>.toGraphPoint(): List<GraphPoint> =
+    map { dto ->
+        GraphPoint(
+            id = "WEATHER",
+            timeFrom = parseApiUtc(dto.time_from),
+            timeTo = parseApiUtc(dto.time_to),
+            quantity = dto.wind_speed,
+        )
+    }.sortedBy { it.timeFrom }
+===== Fichier: repository/SofiaProductionRepository.kt =====
+
+package com.lemarc.sofia.data.repository
+
+import com.lemarc.sofia.HISTORY_START
+import com.lemarc.sofia.SOFIA_BMUS
+import com.lemarc.sofia.TEST_BMU
+import com.lemarc.sofia.data.api.PnEntryDto
+import com.lemarc.sofia.data.api.PnTopProductionPointDto
+import com.lemarc.sofia.data.api.PnTopProductionWindowsDto
+import com.lemarc.sofia.data.api.SofiaApiService
+import com.lemarc.sofia.data.local.ProductionPointEntity
+import com.lemarc.sofia.data.local.dao.SofiaDao
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.model.ProductionSnapshot
+import com.lemarc.sofia.data.model.TopPoint
+import com.lemarc.sofia.data.model.TopWindows
+import com.lemarc.sofia.util.parseApiInstant
+import com.lemarc.sofia.util.parseApiUtc
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.time.Instant
+
+class SofiaProductionRepository(
+    private val apiService: SofiaApiService,
+    private val sofiaDao: SofiaDao,
+) {
+    fun observeProduction(testMode: Boolean): Flow<ProductionSnapshot> {
+        return sofiaDao.getProductionPoints(testMode).map { entities ->
+            val points = entities.map { it.toModel() }
+            val topProduction = calculateTopProduction(points)
+            ProductionSnapshot(
+                points = points,
+                currentMw = points.lastOrNull()?.quantity ?: 0.0,
+                latestDataTimestamp = points.lastOrNull()?.timeTo,
+                topProduction = topProduction,
+            )
+        }
+    }
+
+    suspend fun refreshProduction(testMode: Boolean) = withContext(Dispatchers.IO) {
+        val requestedBmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
+        val entries = requestedBmus.map { bmuId ->
+            async {
+                apiService.getProduction(
+                    bmuId = bmuId,
+                    timeFrom = HISTORY_START.toString(),
+                    timeTo = Instant.now().toString(),
+                )
+            }
+        }.awaitAll().flatten()
+
+        val aggregatedPoints = aggregateProduction(entries, testMode)
+        val entities: List<ProductionPointEntity> = aggregatedPoints.map { it.toProductionEntity(testMode) }
+        sofiaDao.refreshProductionPoints(testMode, entities)
+    }
+
+    companion object {
+        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaProductionRepository {
+            return SofiaProductionRepository(apiService, sofiaDao)
+        }
+    }
+}
+
+fun GraphPoint.toProductionEntity(testMode: Boolean): ProductionPointEntity =
+    ProductionPointEntity(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity,
+        isTestMode = testMode
+    )
+
+fun ProductionPointEntity.toModel(): GraphPoint =
+    GraphPoint(
+        id = id,
+        timeFrom = timeFrom,
+        timeTo = timeTo,
+        quantity = quantity
+    )
+fun calculateTopProduction(points: List<GraphPoint>): TopWindows {
+    if (points.isEmpty()) return TopWindows.Empty
+
+    fun findMax(filteredPoints: List<GraphPoint>): TopPoint {
+        val maxPoint = filteredPoints.maxByOrNull { it.quantity }
+        return TopPoint(
+            maxQuantity = maxPoint?.quantity ?: 0.0,
+            maxDate = maxPoint?.timeFrom
+        )
+    }
+
+    val now = Instant.now()
+    val last7Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(7)) }
+    val last30Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(30)) }
+    val last90Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(90)) }
+
+    return TopWindows(
+        allTime = findMax(points),
+        last7Days = findMax(last7Days),
+        last30Days = findMax(last30Days),
+        last90Days = findMax(last90Days)
+    )
+}
+internal fun aggregateProduction(
+    entries: List<PnEntryDto>,
+    testMode: Boolean,
+): List<GraphPoint> {
+    if (entries.isEmpty()) return emptyList()
+    return entries
+        .groupBy { entry ->
+            Triple(entry.time_from, entry.time_to, entry.settlement_period)
+        }
+        .map { (_, groupedEntries) ->
+            val first = groupedEntries.first()
+            GraphPoint(
+                id = if (testMode) TEST_BMU else "SOFIA_TOTAL",
+                timeFrom = parseApiUtc(first.time_from),
+                timeTo = parseApiUtc(first.time_to),
+                quantity = groupedEntries.sumOf { it.level_mw },
+            )
+        }
+        .sortedBy { it.timeFrom }
+}
+
+private fun PnTopProductionWindowsDto.toTopWindows(): TopWindows =
+    TopWindows(
+        allTime = all_time.toTopPoint(),
+        last7Days = last_7_days.toTopPoint(),
+        last30Days = last_30_days.toTopPoint(),
+        last90Days = last_90_days.toTopPoint(),
+    )
+
+private fun PnTopProductionPointDto.toTopPoint(): TopPoint =
+    TopPoint(
+        maxQuantity = max_mw,
+        maxDate = parseApiInstant(max_date),
+    )
+
+===== Fichier: repository/SofiaRemitRepository.kt =====
+
+package com.lemarc.sofia.data.repository
+
+import com.lemarc.sofia.SOFIA_BMUS
+import com.lemarc.sofia.TEST_BMU
+import com.lemarc.sofia.data.api.RemitEntryDto
+import com.lemarc.sofia.data.api.SofiaApiService
+import com.lemarc.sofia.data.local.RemitNoticeEntity
+import com.lemarc.sofia.data.local.dao.SofiaDao
+import com.lemarc.sofia.data.model.RemitNotice
+import com.lemarc.sofia.util.parseApiInstant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+
+class SofiaRemitRepository(
+    private val apiService: SofiaApiService,
+    private val sofiaDao: SofiaDao,
+) {
+    fun observeRemits(testMode: Boolean): Flow<List<RemitNotice>> {
+        return sofiaDao.getRemitNotices(testMode).map { entities ->
+            entities.map { it.toModel() }
+        }
+    }
+
+    suspend fun refreshRemits(testMode: Boolean) = withContext(Dispatchers.IO) {
+        val bmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
+        val remits = bmus.map { bmuId ->
+            async {
+                apiService.getRemits(
+                    bmuId = bmuId,
+                    eventStatus = "Active",
+                    limit = 100,
+                    offset = 0,
+                )
+            }
+        }.awaitAll().flatten()
+
+        val notices = remits
+            .distinctBy { it.id }
+            .sortedByDescending { parseApiInstant(it.publish_time) ?: InstantMin }
+            .map { it.toEntity(testMode) }
+
+        sofiaDao.refreshRemitNotices(testMode, notices)
+    }
+
+    companion object {
+        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaRemitRepository {
+            return SofiaRemitRepository(apiService, sofiaDao)
+        }
+    }
+}
+
+fun RemitEntryDto.toEntity(testMode: Boolean): RemitNoticeEntity =
+    RemitNoticeEntity(
+        id = id,
+        mrid = mrid,
+        revisionNumber = revision_number,
+        bmuId = bmu_id,
+        participantId = participant_id,
+        assetId = asset_id,
+        unavailabilityType = unavailability_type,
+        eventType = event_type,
+        messageHeading = message_heading,
+        fuelType = fuel_type,
+        normalCapacityMw = normal_capacity_mw,
+        availableCapacityMw = available_capacity_mw,
+        unavailableCapacityMw = unavailable_capacity_mw,
+        eventStatus = event_status,
+        eventStartTime = parseApiInstant(event_start_time),
+        eventEndTime = parseApiInstant(event_end_time),
+        cause = cause,
+        relatedInformation = related_information,
+        publishTime = parseApiInstant(publish_time),
+        outageProfile = outage_profile,
+        isTestMode = testMode
+    )
+
+fun RemitNoticeEntity.toModel(): RemitNotice =
+    RemitNotice(
+        id = id,
+        mrid = mrid,
+        revisionNumber = revisionNumber,
+        bmuId = bmuId,
+        participantId = participantId,
+        assetId = assetId,
+        unavailabilityType = unavailabilityType,
+        eventType = eventType,
+        messageHeading = messageHeading,
+        fuelType = fuelType,
+        normalCapacityMw = normalCapacityMw,
+        availableCapacityMw = availableCapacityMw,
+        unavailableCapacityMw = unavailableCapacityMw,
+        eventStatus = eventStatus,
+        eventStartTime = eventStartTime,
+        eventEndTime = eventEndTime,
+        cause = cause,
+        relatedInformation = relatedInformation,
+        publishTime = publishTime,
+        outageProfile = outageProfile
+    )
+
+private fun toNotice(dto: RemitEntryDto): RemitNotice =
+    RemitNotice(
+        id = dto.id,
+        mrid = dto.mrid,
+        revisionNumber = dto.revision_number,
+        bmuId = dto.bmu_id,
+        participantId = dto.participant_id,
+        assetId = dto.asset_id,
+        unavailabilityType = dto.unavailability_type,
+        eventType = dto.event_type,
+        messageHeading = dto.message_heading,
+        fuelType = dto.fuel_type,
+        normalCapacityMw = dto.normal_capacity_mw,
+        availableCapacityMw = dto.available_capacity_mw,
+        unavailableCapacityMw = dto.unavailable_capacity_mw,
+        eventStatus = dto.event_status,
+        eventStartTime = parseApiInstant(dto.event_start_time),
+        eventEndTime = parseApiInstant(dto.event_end_time),
+        cause = dto.cause,
+        relatedInformation = dto.related_information,
+        publishTime = parseApiInstant(dto.publish_time),
+        outageProfile = dto.outage_profile,
+    )
+
+private val InstantMin = java.time.Instant.EPOCH
+===== Fichier: utils.kt =====
+
+package com.lemarc.sofia.data
+
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+
+fun filterPoints(points: List<GraphPoint>, window: TimeWindow): List<GraphPoint> {
+    val duration = window.duration ?: return points
+    val lastTimestamp = points.lastOrNull()?.timeTo ?: return emptyList()
+    val threshold = lastTimestamp.minus(duration)
+    return points.filter { it.timeTo >= threshold }
+}
+===== Fichier: local/SofiaDatabase.kt =====
+
+package com.lemarc.sofia.data.local
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
+import com.lemarc.sofia.data.local.dao.SofiaDao
+import java.time.Instant
+
+@Database(
+    entities = [
+        ProductionPointEntity::class,
+        B1610PointEntity::class,
+        WeatherPointEntity::class,
+        RemitNoticeEntity::class
+    ],
+    version = 1,
+    exportSchema = false
+)
+@TypeConverters(SofiaDatabase.Converters::class)
+abstract class SofiaDatabase : RoomDatabase() {
+    abstract fun sofiaDao(): SofiaDao
+
+    class Converters {
+        @TypeConverter
+        fun fromTimestamp(value: Long?): Instant? {
+            return value?.let { Instant.ofEpochMilli(it) }
+        }
+
+        @TypeConverter
+        fun dateToTimestamp(date: Instant?): Long? {
+            return date?.toEpochMilli()
+        }
+    }
+
+    companion object {
+        @Volatile
+        private var INSTANCE: SofiaDatabase? = null
+
+        fun getDatabase(context: Context): SofiaDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    SofiaDatabase::class.java,
+                    "sofia_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+
+===== Fichier: local/dao/SofiaDao.kt =====
+
+package com.lemarc.sofia.data.local.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import com.lemarc.sofia.data.local.B1610PointEntity
+import com.lemarc.sofia.data.local.ProductionPointEntity
+import com.lemarc.sofia.data.local.RemitNoticeEntity
+import com.lemarc.sofia.data.local.WeatherPointEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface SofiaDao {
+
+    @Query("SELECT * FROM production_points WHERE isTestMode = :testMode ORDER BY timeFrom ASC")
+    fun getProductionPoints(testMode: Boolean): Flow<List<ProductionPointEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProductionPoints(points: List<ProductionPointEntity>)
+
+    @Query("DELETE FROM production_points WHERE isTestMode = :testMode")
+    suspend fun clearProductionPoints(testMode: Boolean)
+
+    @Transaction
+    suspend fun refreshProductionPoints(testMode: Boolean, points: List<ProductionPointEntity>) {
+        clearProductionPoints(testMode)
+        insertProductionPoints(points)
+    }
+
+    @Query("SELECT * FROM b1610_points WHERE isTestMode = :testMode ORDER BY timeFrom ASC")
+    fun getB1610Points(testMode: Boolean): Flow<List<B1610PointEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertB1610Points(points: List<B1610PointEntity>)
+
+    @Query("DELETE FROM b1610_points WHERE isTestMode = :testMode")
+    suspend fun clearB1610Points(testMode: Boolean)
+
+    @Transaction
+    suspend fun refreshB1610Points(testMode: Boolean, points: List<B1610PointEntity>) {
+        clearB1610Points(testMode)
+        insertB1610Points(points)
+    }
+
+    @Query("SELECT * FROM weather_points ORDER BY timeFrom ASC")
+    fun getWeatherPoints(): Flow<List<WeatherPointEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWeatherPoints(points: List<WeatherPointEntity>)
+
+    @Query("DELETE FROM weather_points")
+    suspend fun clearWeatherPoints()
+
+    @Transaction
+    suspend fun refreshWeatherPoints(points: List<WeatherPointEntity>) {
+        clearWeatherPoints()
+        insertWeatherPoints(points)
+    }
+
+    @Query("SELECT * FROM remit_notices WHERE isTestMode = :testMode ORDER BY publishTime DESC")
+    fun getRemitNotices(testMode: Boolean): Flow<List<RemitNoticeEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRemitNotices(notices: List<RemitNoticeEntity>)
+
+    @Query("DELETE FROM remit_notices WHERE isTestMode = :testMode")
+    suspend fun clearRemitNotices(testMode: Boolean)
+
+    @Transaction
+    suspend fun refreshRemitNotices(testMode: Boolean, notices: List<RemitNoticeEntity>) {
+        clearRemitNotices(testMode)
+        insertRemitNotices(notices)
+    }
+}
+
+===== Fichier: local/Entities.kt =====
+
+package com.lemarc.sofia.data.local
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import java.time.Instant
+
+@Entity(tableName = "production_points")
+data class ProductionPointEntity(
+    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
+    val id: String,
+    val timeFrom: Instant,
+    val timeTo: Instant,
+    val quantity: Double,
+    val isTestMode: Boolean,
+)
+
+@Entity(tableName = "b1610_points")
+data class B1610PointEntity(
+    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
+    val id: String,
+    val timeFrom: Instant,
+    val timeTo: Instant,
+    val quantity: Double,
+    val isTestMode: Boolean,
+)
+
+@Entity(tableName = "weather_points")
+data class WeatherPointEntity(
+    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
+    val id: String,
+    val timeFrom: Instant,
+    val timeTo: Instant,
+    val quantity: Double,
+)
+
+@Entity(tableName = "remit_notices")
+data class RemitNoticeEntity(
+    @PrimaryKey val id: Int,
+    val mrid: String,
+    val revisionNumber: Int,
+    val bmuId: String,
+    val participantId: String,
+    val assetId: String,
+    val unavailabilityType: String,
+    val eventType: String,
+    val messageHeading: String,
+    val fuelType: String,
+    val normalCapacityMw: Double?,
+    val availableCapacityMw: Double?,
+    val unavailableCapacityMw: Double?,
+    val eventStatus: String,
+    val eventStartTime: Instant?,
+    val eventEndTime: Instant?,
+    val cause: String,
+    val relatedInformation: String,
+    val publishTime: Instant?,
+    val outageProfile: String,
+    val isTestMode: Boolean,
+)
+
+===== Fichier: model/Model.kt =====
+
+package com.lemarc.sofia.data.model
+
+import java.time.Instant
+
+data class GraphPoint(
+    val id: String,
+    val timeFrom: Instant,
+    val timeTo: Instant,
+    val quantity: Double,
+)
+
+data class B1610Snapshot(
+    val points: List<GraphPoint>,
+    val latestDataTimestamp: Instant?,
+    val topB1610: TopWindows,
+)
+
+data class WeatherSnapshot(
+    val points: List<GraphPoint>,
+    val latestWindSpeed: Double?,
+    val latestDataTimestamp: Instant?,
+)
+
+data class ProductionSnapshot(
+    val points: List<GraphPoint>,
+    val currentMw: Double,
+    val latestDataTimestamp: Instant?,
+    val topProduction: TopWindows,
+)
+
+data class TopPoint(
+    val maxQuantity: Double,
+    val maxDate: Instant?,
+)
+
+data class TopWindows(
+    val allTime: TopPoint,
+    val last7Days: TopPoint,
+    val last30Days: TopPoint,
+    val last90Days: TopPoint,
+) {
+    companion object {
+        val Empty = TopWindows(
+            allTime = TopPoint(0.0, null),
+            last7Days = TopPoint(0.0, null),
+            last30Days = TopPoint(0.0, null),
+            last90Days = TopPoint(0.0, null),
+        )
+    }
+}
+
+data class RemitNotice(
+    val id: Int,
+    val mrid: String,
+    val revisionNumber: Int,
+    val bmuId: String,
+    val participantId: String,
+    val assetId: String,
+    val unavailabilityType: String,
+    val eventType: String,
+    val messageHeading: String,
+    val fuelType: String,
+    val normalCapacityMw: Double?,
+    val availableCapacityMw: Double?,
+    val unavailableCapacityMw: Double?,
+    val eventStatus: String,
+    val eventStartTime: Instant?,
+    val eventEndTime: Instant?,
+    val cause: String,
+    val relatedInformation: String,
+    val publishTime: Instant?,
+    val outageProfile: String,
+)
+===== Fichier: api/SofiaApiService.kt =====
+
+package com.lemarc.sofia.data.api
+
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+interface SofiaApiService {
+    @GET("pn/{bmuId}")
+    suspend fun getProduction(
+        @Path("bmuId") bmuId: String,
+        @Query("time_from") timeFrom: String,
+        @Query("time_to") timeTo: String,
+    ): List<PnEntryDto>
+
+    @GET("pn/top-production")
+    suspend fun getTopProduction(): PnTopProductionWindowsDto
+
+    @GET("remit")
+    suspend fun getRemits(
+        @Query("bmu_id") bmuId: String? = null,
+        @Query("event_status") eventStatus: String? = null,
+        @Query("limit") limit: Int = 100,
+        @Query("offset") offset: Int = 0,
+    ): List<RemitEntryDto>
+
+    @GET("weather")
+    suspend fun getWeather(
+        @Query("time_from") timeFrom: String,
+        @Query("time_to") timeTo: String,
+    ): List<WeatherEntryDto>
+
+    @GET("b1610/{bmuId}")
+    suspend fun getB1610(
+        @Path("bmuId") bmuId: String,
+        @Query("time_from") timeFrom: String,
+        @Query("time_to") timeTo: String,
+    ): List<B1610EntryDto>
+
+    @GET("b1610/top-production")
+    suspend fun getB1610TopProduction(): B1610TopProductionWindowsDto
+
+}
+
+data class PnEntryDto(
+    val bmu_id: String,
+    val time_from: String,
+    val time_to: String,
+    val settlement_period: Int,
+    val level_mw: Double,
+    val source: String,
+)
+
+data class PnTopProductionPointDto(
+    val max_mw: Double,
+    val max_date: String?,
+)
+
+data class PnTopProductionWindowsDto(
+    val all_time: PnTopProductionPointDto,
+    val last_7_days: PnTopProductionPointDto,
+    val last_30_days: PnTopProductionPointDto,
+    val last_90_days: PnTopProductionPointDto,
+)
+
+data class RemitEntryDto(
+    val id: Int,
+    val mrid: String,
+    val revision_number: Int,
+    val bmu_id: String,
+    val participant_id: String,
+    val asset_id: String,
+    val unavailability_type: String,
+    val event_type: String,
+    val message_heading: String,
+    val fuel_type: String,
+    val normal_capacity_mw: Double?,
+    val available_capacity_mw: Double?,
+    val unavailable_capacity_mw: Double?,
+    val event_status: String,
+    val event_start_time: String?,
+    val event_end_time: String?,
+    val cause: String,
+    val related_information: String,
+    val publish_time: String?,
+    val outage_profile: String,
+)
+
+data class WeatherEntryDto(
+    val time_from: String,
+    val time_to: String,
+    val wind_speed: Double,
+    val source: String,
+)
+
+data class B1610EntryDto(
+    val bmu_id: String,
+    val time_from: String,
+    val time_to: String,
+    val quantity: Double,
+    val settlement_period: Int,
+)
+
+data class B1610TopProductionPointDto(
+    val quantity: Double,
+    val max_date: String?,
+)
+
+data class B1610TopProductionWindowsDto(
+    val all_time: B1610TopProductionPointDto,
+    val last_7_days: B1610TopProductionPointDto,
+    val last_30_days: B1610TopProductionPointDto,
+    val last_90_days: B1610TopProductionPointDto,
+)
