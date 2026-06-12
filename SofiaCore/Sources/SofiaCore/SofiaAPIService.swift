@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public enum APIError: LocalizedError {
     case badURL
@@ -71,6 +74,7 @@ public actor SofiaAPIService {
         guard let url = components.url else { throw APIError.badURL }
         return try await fetch(url: url)
     }
+
     // MARK: - PN: date range available in the database
 
     public func pnDateRange() async throws -> PnDateRange {
@@ -82,12 +86,50 @@ public actor SofiaAPIService {
 
     // MARK: - PN: all-time / 7d / 30d / 90d production records
 
-    public func topProduction() async throws -> PnTopProductionWindows {
+    public func topProduction() async throws -> PnTopProductionWindowsDto {
         guard let url = URL(string: "\(baseURL)/pn/top-production") else {
             throw APIError.badURL
         }
         return try await fetch(url: url)
     }
+
+    // MARK: - B1610: data for a BMU over a time range
+
+    public func b1610Data(bmuId: String, from: Date, to: Date) async throws -> [B1610Response] {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime]
+        var components = URLComponents(string: "\(baseURL)/b1610/\(bmuId)")!
+        components.queryItems = [
+            URLQueryItem(name: "time_from", value: fmt.string(from: from)),
+            URLQueryItem(name: "time_to",   value: fmt.string(from: to))
+        ]
+        guard let url = components.url else { throw APIError.badURL }
+        return try await fetch(url: url)
+    }
+
+    // MARK: - B1610: all-time / 7d / 30d / 90d production records
+
+    public func b1610TopProduction() async throws -> B1610TopProductionWindowsDto {
+        guard let url = URL(string: "\(baseURL)/b1610/top-production") else {
+            throw APIError.badURL
+        }
+        return try await fetch(url: url)
+    }
+
+    // MARK: - Weather: data over a time range
+
+    public func weatherData(from: Date, to: Date) async throws -> [WeatherResponse] {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime]
+        var components = URLComponents(string: "\(baseURL)/weather")!
+        components.queryItems = [
+            URLQueryItem(name: "time_from", value: fmt.string(from: from)),
+            URLQueryItem(name: "time_to",   value: fmt.string(from: to))
+        ]
+        guard let url = components.url else { throw APIError.badURL }
+        return try await fetch(url: url)
+    }
+
     // MARK: - REMIT: list with optional filters
 
     /// Fetches a paginated list of REMIT notices.

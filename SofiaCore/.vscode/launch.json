@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SofiaCore}",
+            "name": "Debug SofiaCoreSmokeTest",
+            "target": "SofiaCoreSmokeTest",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug SofiaCoreSmokeTest"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:SofiaCore}",
+            "name": "Release SofiaCoreSmokeTest",
+            "target": "SofiaCoreSmokeTest",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release SofiaCoreSmokeTest"
+        }
+    ]
+}
