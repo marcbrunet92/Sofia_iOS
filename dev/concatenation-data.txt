@@ -1,956 +1,860 @@
-marc@Marcs-Mac-mini Sofia % cd /Users/marc/StudioProjects/Sofia_Android/app/src/main/java/com/lemarc/sofia/data
-marc@Marcs-Mac-mini data % tree
-.
-├── api
-│   └── SofiaApiService.kt
-├── local
-│   ├── Entities.kt
-│   ├── SofiaDatabase.kt
-│   └── dao
-│       └── SofiaDao.kt
-├── model
-│   └── Model.kt
-├── repository
-│   ├── SofiaB1610Repository.kt
-│   ├── SofiaProductionRepository.kt
-│   ├── SofiaRemitRepository.kt
-│   └── SofiaWeatherRepository.kt
-├── settings
-│   └── SettingsRepository.kt
-└── utils.kt
 
-7 directories, 11 files
-marc@Marcs-Mac-mini data %
+===== Fichier: Views/ProductionView.swift =====
 
-===== Fichier: settings/SettingsRepository.kt =====
+import SwiftUI
 
-package com.lemarc.sofia.data.settings
+struct DashboardView: View {
+    @ObservedObject var vm: SofiaViewModel
 
-import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
-import com.lemarc.sofia.TEST_MODE_KEY
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
 
-private val Context.dataStore by preferencesDataStore(name = "sofia_settings")
-
-class SettingsRepository(
-    private val context: Context,
-) {
-    val testMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[TEST_MODE_KEY] ?: false
-    }
-
-    suspend fun setTestMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[TEST_MODE_KEY] = enabled
-        }
-    }
-}
-
-===== Fichier: repository/SofiaB1610Repository.kt =====
-
-package com.lemarc.sofia.data.repository
-
-import com.lemarc.sofia.BASE_URL
-import com.lemarc.sofia.HISTORY_START
-import com.lemarc.sofia.SOFIA_BMUS
-import com.lemarc.sofia.TEST_BMU
-import com.lemarc.sofia.data.api.B1610EntryDto
-import com.lemarc.sofia.data.api.B1610TopProductionPointDto
-import com.lemarc.sofia.data.api.B1610TopProductionWindowsDto
-import com.lemarc.sofia.data.api.SofiaApiService
-import com.lemarc.sofia.data.model.B1610Snapshot
-import com.lemarc.sofia.data.model.GraphPoint
-import com.lemarc.sofia.data.model.TopPoint
-import com.lemarc.sofia.data.model.TopWindows
-import com.lemarc.sofia.data.local.B1610PointEntity
-import com.lemarc.sofia.data.local.dao.SofiaDao
-import com.lemarc.sofia.util.parseApiInstant
-import com.lemarc.sofia.util.parseApiUtc
-import java.time.Instant
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
-import java.time.Duration
-
-class SofiaB1610Repository(
-    private val apiService: SofiaApiService,
-    private val sofiaDao: SofiaDao,
-) {
-    fun observeB1610(testMode: Boolean): Flow<B1610Snapshot> {
-        return sofiaDao.getB1610Points(testMode).map { entities ->
-            val points: List<GraphPoint> = entities.map { it.toModel() }
-            B1610Snapshot(
-                points = points,
-                latestDataTimestamp = points.lastOrNull()?.timeTo,
-                topB1610 = calculateTopB1610(points)
-            )
-        }
-    }
-
-    suspend fun refreshB1610(testMode: Boolean) = withContext(Dispatchers.IO) {
-        val requestedBmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
-        val (entries, topB1610) = coroutineScope {
-            val b1610Deferred = async {
-                requestedBmus.map { bmuId ->
-                    async {
-                        apiService.getB1610(
-                            bmuId = bmuId,
-                            timeFrom = HISTORY_START.toString(),
-                            timeTo = Instant.now().toString(),
-                        )
+                    // Test mode banner
+                    if vm.testMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.black)
+                            Text("TEST MODE — displaying T_HEYM11 only")
+                                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.black)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.yellow, in: RoundedRectangle(cornerRadius: 10))
                     }
-                }.awaitAll().flatten()
+
+                    // Error banner
+                    if let err = vm.errorMessage {
+                        HStack {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(err).font(.caption)
+                            Spacer()
+                            Button("OK") { vm.errorMessage = nil }.font(.caption)
+                        }
+                        .padding(10)
+                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    // Ring + total
+                    ProductionRingCard(vm: vm)
+
+                    // Chart
+                    ProductionChartView(vm: vm)
+                    
+                    RecordsCardView(
+                        windows: vm.topProduction,
+                        isLoading: vm.isLoadingRecords
+                    )
+                    
+                    // Timestamps
+                    TimestampsView(vm: vm)
+                        .padding(.bottom, 8)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            val topB1610Deferred = async {
-                runCatching { apiService.getB1610TopProduction() }
-                    .getOrNull()
-                    ?.toTopWindows()
-                    ?: TopWindows.Empty
+            .navigationTitle(vm.testMode ? "Test Mode" : "Sofia Wind Farm")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await vm.refresh() }
+                    } label: {
+                        if vm.isLoading {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(vm.isLoading)
+                }
             }
-            b1610Deferred.await() to topB1610Deferred.await()
-        }
-
-        val aggregatedPoints = aggregateB1610(entries, testMode)
-        val entities: List<B1610PointEntity> = aggregatedPoints.map { it.toB1610Entity(testMode) }
-        sofiaDao.refreshB1610Points(testMode, entities)
-    }
-
-    companion object {
-        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaB1610Repository {
-            return SofiaB1610Repository(apiService, sofiaDao)
         }
     }
 }
 
-fun GraphPoint.toB1610Entity(testMode: Boolean): B1610PointEntity =
-    B1610PointEntity(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity,
-        isTestMode = testMode
-    )
+===== Fichier: Views/SettingsView.swift =====
 
-fun B1610PointEntity.toModel(): GraphPoint =
-    GraphPoint(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity
-    )
+import SwiftUI
 
-fun calculateTopB1610(points: List<GraphPoint>): TopWindows {
-    if (points.isEmpty()) return TopWindows.Empty
+struct SettingsView: View {
+    @ObservedObject var vm: SofiaViewModel
+    @State private var showVisual = false
 
-    fun findMax(filteredPoints: List<GraphPoint>): TopPoint {
-        val maxPoint = filteredPoints.maxByOrNull { it.quantity }
-        return TopPoint(
-            maxQuantity = maxPoint?.quantity ?: 0.0,
-            maxDate = maxPoint?.timeFrom
+    var body: some View {
+        NavigationStack {
+            Form {
+                // Test mode section
+                Section {
+                    Toggle(isOn: $vm.testMode) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Mode")
+                                .font(.body)
+                            Text("Use T_HEYM11 instead of Sofia BMUs")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.yellow)
+
+                    if vm.testMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            Text("Active — showing HEYM11 data only")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Mode")
+                } footer: {
+                    Text("In normal mode, the app aggregates the four Sofia BMUs (T_SOFOW-11/12/21/22) as a single 1400 MW wind farm. Test mode displays the adjacent T_HEYM11 unit, which has real production data while Sofia is under construction.")
+                }
+
+                // Visualisation section
+                Section("Visualisation") {
+                    Link(destination: URL(string: "https://sofia.lemarc.fr/visual/pn")!) {
+                        HStack {
+                            Image(systemName: "chart.xyaxis.line")
+                                .foregroundStyle(.blue)
+                            Text("Open full PN chart (browser)")
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                }
+
+                // About section
+                Section("About") {
+                    LabeledContent("API", value: "sofia.lemarc.fr")
+                    LabeledContent("Normal BMUs", value: "SOFOW-11/12/21/22")
+                    LabeledContent("Test BMU", value: "HEYM11")
+                    LabeledContent("Max capacity", value: "1400 MW")
+                }
+            }
+            .navigationTitle("Settings")
+        }
+    }
+}
+
+===== Fichier: Views/RemitView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RemitView: View {
+    @ObservedObject var vm: SofiaViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if vm.isLoadingRemits && vm.remits.isEmpty {
+                    ProgressView("Loading notices…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if vm.remits.isEmpty {
+                    ContentUnavailableView(
+                        "No REMIT Notices",
+                        systemImage: "bell.slash",
+                        description: Text("No outage notices found for \(vm.mode.displayName).")
+                    )
+                } else {
+                    List(vm.remits) { remit in
+                        NavigationLink(destination: RemitDetailView(remit: remit)) {
+                            RemitRowView(remit: remit)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                    .refreshable { await vm.refreshRemits() }
+                }
+            }
+            .navigationTitle("REMIT Notices")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if vm.isLoadingRemits {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task { await vm.refreshRemits() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let err = vm.remitError {
+                    Text(err)
+                        .font(.caption)
+                        .padding(8)
+                        .background(.red.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.white)
+                        .padding()
+                }
+            }
+        }
+    }
+}
+
+===== Fichier: Views/ContentView.swift =====
+
+import SwiftUI
+import Charts
+
+// MARK: - Main app with tab navigation
+struct ContentView: View {
+    @StateObject private var vm = SofiaViewModel()
+
+    var body: some View {
+        TabView {
+            DashboardView(vm: vm)
+                .tabItem {
+                    Label("Production", systemImage: "bolt.fill")
+                }
+            
+            RemitView(vm: vm)
+                .tabItem {
+                    Label("Remit", systemImage: "exclamationmark.triangle.fill")
+                }
+
+            SettingsView(vm: vm)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+        }
+    }
+}
+
+#Preview {
+    ContentView()
+}
+
+===== Fichier: SofiaApp.swift =====
+
+import SwiftUI
+
+@main
+struct SofiaApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
+
+===== Fichier: ViewModels/SofiaViewModel.swift =====
+
+import SwiftUI
+import Combine
+import SofiaCore
+
+@MainActor
+class SofiaViewModel: ObservableObject {
+
+    // MARK: - Settings
+    @AppStorage("testMode") var testMode: Bool = false {
+        didSet { Task { await refresh() } }
+    }
+
+    var mode: AppMode { testMode ? .test : .normal }
+
+    // MARK: - Published state
+    @Published var totalMW: Double = 0
+    @Published var perBMU: [String: Double] = [:]
+    @Published var history: [AggregatedPoint] = []
+
+    @Published var lastAPIUpdate: Date?
+    @Published var lastFetch: Date?
+
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    // MARK: - Chart window
+    @Published var chartHours: Double = 48
+
+    // MARK: - Private
+    private var timer: Timer?
+    private let refreshInterval: TimeInterval = 60
+
+    // MARK: - Init
+    init() {
+        Task { await refresh() }
+        startTimer()
+    }
+
+    deinit { timer?.invalidate() }
+
+    // MARK: - Public
+    func refresh() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let bmuIds = mode.bmuIds
+        let to   = Date()
+        let from = Calendar.current.date(from: DateComponents(year: 2026, month: 4, day: 1))!
+
+        do {
+            let allData: [PnResponse] = try await withThrowingTaskGroup(of: [PnResponse].self) { group in
+                for bmu in bmuIds {
+                    group.addTask {
+                        (try? await SofiaAPIService.shared.pnData(bmuId: bmu, from: from, to: to)) ?? []
+                    }
+                }
+                var results: [PnResponse] = []
+                for try await r in group { results.append(contentsOf: r) }
+                return results
+            }
+
+            // Latest value per BMU
+            let latestPerBMU = allData.latestPerBMU()
+            perBMU = latestPerBMU.mapValues(\.levelMw)
+            totalMW = perBMU.values.reduce(0, +)
+            history = allData.aggregatedHistory()
+
+            lastFetch = Date()
+            
+            await refreshRemits()
+
+            await refreshTopProduction()
+
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Filtered history for chart window
+    var visibleHistory: [AggregatedPoint] {
+        guard !history.isEmpty else { return [] }
+        if chartHours == 0 { return history }
+        let cutoff = Date().addingTimeInterval(-chartHours * 3600)
+        let filtered = history.filter { $0.time >= cutoff }
+        return filtered.isEmpty ? history : filtered
+    }
+    var capacityMW: Double { mode.capacityMW }
+
+    var capacityFactor: Double { min(totalMW / capacityMW, 1.0) }
+
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { await self.refresh() }
+        }
+    }
+    
+    @Published var remits: [RemitResponse] = []
+    @Published var isLoadingRemits = false
+    @Published var remitError: String?
+
+    func refreshRemits() async {
+        isLoadingRemits = true
+        remitError = nil
+        defer { isLoadingRemits = false }
+
+        do {
+            var all: [RemitResponse] = []
+            for bmuId in mode.bmuIds {
+                let results = (try? await SofiaAPIService.shared.listRemits(bmuId: bmuId, limit: 100)) ?? []
+                all.append(contentsOf: results)
+            }
+            // Sort: active first, then by most recent publish time
+            remits = all.sorted {
+                if $0.isCurrentlyActive != $1.isCurrentlyActive { return $0.isCurrentlyActive }
+                return ($0.publishTime ?? .distantPast) > ($1.publishTime ?? .distantPast)
+            }
+        } catch {
+            remitError = error.localizedDescription
+        }
+    }
+    // MARK: - Records
+    @Published var topProduction: PnTopProductionWindows?
+    @Published var isLoadingRecords = false
+
+    func refreshTopProduction() async {
+        isLoadingRecords = true
+        defer { isLoadingRecords = false }
+        topProduction = try? await SofiaAPIService.shared.topProduction()
+    }
+}
+
+===== Fichier: components/RemitRowView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RemitRowView: View {
+    let remit: RemitResponse
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Status dot
+            Circle()
+                .fill(remit.isCurrentlyActive ? .orange : .secondary)
+                .frame(width: 10, height: 10)
+                .padding(.top, 5)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(remit.messageHeading)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(2)
+                    Spacer()
+                    statusBadge
+                }
+
+                Text(remit.bmuId)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let start = remit.eventStartTime {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                        Text(eventWindow(start: start, end: remit.eventEndTime))
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+
+                if let available = remit.availableCapacityMw {
+                    Label("\(Int(available)) MW available", systemImage: "arrow.down.circle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        Text(remit.eventStatus)
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(badgeColor.opacity(0.15), in: Capsule())
+            .foregroundStyle(badgeColor)
+    }
+
+    private var badgeColor: Color {
+        switch remit.eventStatus.lowercased() {
+        case "active":    return .orange
+        case "dismissed": return .secondary
+        default:          return .blue
+        }
+    }
+
+    private func eventWindow(start: Date, end: Date?) -> String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .short
+        fmt.timeStyle = .short
+        let startStr = fmt.string(from: start)
+        let endStr = end.map { fmt.string(from: $0) } ?? "ongoing"
+        return "\(startStr) → \(endStr)"
+    }
+}
+
+===== Fichier: components/RecordsCardView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RecordsCardView: View {
+
+    let windows: PnTopProductionWindows?
+    let isLoading: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            // Header
+            HStack {
+                Label("Production Records", systemImage: "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if isLoading {
+                    ProgressView().scaleEffect(0.75)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            // Rows
+            if let w = windows {
+                VStack(spacing: 0) {
+                    RecordRow(label: "All time",   point: w.allTime,    accent: .yellow)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 90 d",  point: w.last90Days, accent: .orange)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 30 d",  point: w.last30Days, accent: .blue)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 7 d",   point: w.last7Days,  accent: .green)
+                }
+            } else if !isLoading {
+                Text("No data available")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+            } else {
+                Color.clear.frame(height: 80)
+            }
+        }
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Single row
+
+private struct RecordRow: View {
+
+    let label: String
+    let point: PnTopProductionPoint
+    let accent: Color
+
+    private var dateText: String {
+        guard let d = point.maxDate else { return "–" }
+        return d.formatted(.dateTime.day().month(.abbreviated).year().hour().minute())
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+
+            // Accent dot
+            Circle()
+                .fill(accent)
+                .frame(width: 8, height: 8)
+
+            // Label
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(width: 72, alignment: .leading)
+
+            Spacer()
+
+            // Value
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(point.maxMw.formatted(.number.precision(.fractionLength(0))) + " MW")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Text(dateText)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    let pt = { (mw: Double, iso: String) in
+        PnTopProductionPoint(
+            maxMw: mw,
+            maxDate: ISO8601DateFormatter().date(from: iso)
         )
     }
-
-    val now = Instant.now()
-    val last7Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(7)) }
-    val last30Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(30)) }
-    val last90Days = points.filter { it.timeFrom >= now.minus(Duration.ofDays(90)) }
-
-    return TopWindows(
-        allTime = findMax(points),
-        last7Days = findMax(last7Days),
-        last30Days = findMax(last30Days),
-        last90Days = findMax(last90Days)
+    let windows = PnTopProductionWindows(
+        allTime:    pt(1398, "2026-04-12T14:00:00Z"),
+        last7Days:  pt(1201, "2026-05-22T09:30:00Z"),
+        last30Days: pt(1350, "2026-05-01T11:00:00Z"),
+        last90Days: pt(1390, "2026-04-15T16:00:00Z")
     )
+    return RecordsCardView(windows: windows, isLoading: false)
+        .padding()
+        .background(Color(.systemGroupedBackground))
 }
 
-internal fun aggregateB1610(
-    entries: List<B1610EntryDto>,
-    testMode: Boolean,
-): List<GraphPoint> {
-    if (entries.isEmpty()) return emptyList()
-    return entries
-        .groupBy { entry ->
-            Triple(entry.time_from, entry.time_to, entry.settlement_period)
-        }
-        .map { (_, groupedEntries) ->
-            val first = groupedEntries.first()
-            GraphPoint(
-                id = if (testMode) TEST_BMU else "SOFIA_TOTAL",
-                timeFrom = parseApiUtc(first.time_from),
-                timeTo = parseApiUtc(first.time_to),
-                quantity = groupedEntries.sumOf { it.quantity },
-            )
-        }
-        .sortedBy { it.timeFrom }
-}
+===== Fichier: components/ProductionChartView.swift =====
 
-private fun B1610TopProductionWindowsDto.toTopWindows(): TopWindows =
-    TopWindows(
-        allTime = all_time.toTopPoint(),
-        last7Days = last_7_days.toTopPoint(),
-        last30Days = last_30_days.toTopPoint(),
-        last90Days = last_90_days.toTopPoint(),
-    )
+import SwiftUI
+import Charts
+import SofiaCore
 
-private fun B1610TopProductionPointDto.toTopPoint(): TopPoint =
-    TopPoint(
-        maxQuantity = quantity,
-        maxDate = parseApiInstant(max_date),
-    )
+struct ProductionChartView: View {
+    @ObservedObject var vm: SofiaViewModel
 
-===== Fichier: repository/SofiaWeatherRepository.kt =====
+    private var points: [AggregatedPoint] { vm.visibleHistory }
 
-package com.lemarc.sofia.data.repository
-
-import com.lemarc.sofia.HISTORY_START
-import com.lemarc.sofia.data.api.SofiaApiService
-import com.lemarc.sofia.data.api.WeatherEntryDto
-import com.lemarc.sofia.data.local.WeatherPointEntity
-import com.lemarc.sofia.data.local.dao.SofiaDao
-import com.lemarc.sofia.data.model.GraphPoint
-import com.lemarc.sofia.data.model.WeatherSnapshot
-import com.lemarc.sofia.util.parseApiUtc
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
-import java.time.Instant
-
-class SofiaWeatherRepository(
-    private val apiService: SofiaApiService,
-    private val sofiaDao: SofiaDao,
-) {
-    fun observeWeather(): Flow<WeatherSnapshot> {
-        return sofiaDao.getWeatherPoints().map { entities ->
-            val points: List<GraphPoint> = entities.map { it.toModel() }
-            WeatherSnapshot(
-                points = points,
-                latestWindSpeed = points.lastOrNull()?.quantity,
-                latestDataTimestamp = points.lastOrNull()?.timeTo,
-            )
-        }
+    private var maxMW: Double {
+        max((points.map(\.totalMw).max() ?? 100) * 1.15, 10)
     }
 
-    suspend fun refreshWeather() = withContext(Dispatchers.IO) {
-        val entries = apiService.getWeather(
-            timeFrom = HISTORY_START.toString(),
-            timeTo = Instant.now().toString(),
-        )
-        val points = entries.toGraphPoint()
-        val entities: List<WeatherPointEntity> = points.map { it.toWeatherEntity() }
-        sofiaDao.refreshWeatherPoints(entities)
-    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
 
-    companion object {
-        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaWeatherRepository {
-            return SofiaWeatherRepository(apiService, sofiaDao)
-        }
-    }
-}
+            // Header
+            HStack {
+                Text("Production History")
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+                // Window selector
+                HStack(spacing: 4) {
+                    ForEach([6.0, 24.0, 48.0, 168.0, 0.0], id: \.self) { h in
+                        Button(hourLabel(h)) {
+                            withAnimation { vm.chartHours = h }
+                        }
+                        .font(.system(.caption2, design: .rounded, weight: .semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(vm.chartHours == h ? Color.blue : Color.blue.opacity(0.1),
+                                    in: Capsule())
+                        .foregroundStyle(vm.chartHours == h ? .white : .blue)
+                    }
+                }
+            }
 
-fun GraphPoint.toWeatherEntity(): WeatherPointEntity =
-    WeatherPointEntity(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity
-    )
-
-fun WeatherPointEntity.toModel(): GraphPoint =
-    GraphPoint(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity
-    )
-
-internal fun List<WeatherEntryDto>.toGraphPoint(): List<GraphPoint> =
-    map { dto ->
-        GraphPoint(
-            id = "WEATHER",
-            timeFrom = parseApiUtc(dto.time_from),
-            timeTo = parseApiUtc(dto.time_to),
-            quantity = dto.wind_speed,
-        )
-    }.sortedBy { it.timeFrom }
-===== Fichier: repository/SofiaProductionRepository.kt =====
-
-package com.lemarc.sofia.data.repository
-
-import com.lemarc.sofia.HISTORY_START
-import com.lemarc.sofia.SOFIA_BMUS
-import com.lemarc.sofia.TEST_BMU
-import com.lemarc.sofia.data.api.PnEntryDto
-import com.lemarc.sofia.data.api.PnTopProductionPointDto
-import com.lemarc.sofia.data.api.PnTopProductionWindowsDto
-import com.lemarc.sofia.data.api.SofiaApiService
-import com.lemarc.sofia.data.local.ProductionPointEntity
-import com.lemarc.sofia.data.local.dao.SofiaDao
-import com.lemarc.sofia.data.model.GraphPoint
-import com.lemarc.sofia.data.model.ProductionSnapshot
-import com.lemarc.sofia.data.model.TopPoint
-import com.lemarc.sofia.data.model.TopWindows
-import com.lemarc.sofia.util.parseApiInstant
-import com.lemarc.sofia.util.parseApiUtc
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
-import java.time.Instant
-
-class SofiaProductionRepository(
-    private val apiService: SofiaApiService,
-    private val sofiaDao: SofiaDao,
-) {
-    fun observeProduction(testMode: Boolean): Flow<ProductionSnapshot> {
-        return sofiaDao.getProductionPoints(testMode).map { entities ->
-            val points = entities.map { it.toModel() }
-            val topProduction = calculateTopProduction(points)
-            ProductionSnapshot(
-                points = points,
-                currentMw = points.lastOrNull()?.quantity ?: 0.0,
-                latestDataTimestamp = points.lastOrNull()?.timeTo,
-                topProduction = topProduction,
-            )
-        }
-    }
-
-    suspend fun refreshProduction(testMode: Boolean) = withContext(Dispatchers.IO) {
-        val requestedBmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
-        val entries = requestedBmus.map { bmuId ->
-            async {
-                apiService.getProduction(
-                    bmuId = bmuId,
-                    timeFrom = HISTORY_START.toString(),
-                    timeTo = Instant.now().toString(),
+            if points.isEmpty {
+                ContentUnavailableView(
+                    "No data",
+                    systemImage: "waveform.slash",
+                    description: Text("No production data for this window")
                 )
-            }
-        }.awaitAll().flatten()
-
-        val aggregatedPoints = aggregateProduction(entries, testMode)
-        val entities: List<ProductionPointEntity> = aggregatedPoints.map { it.toProductionEntity(testMode) }
-        sofiaDao.refreshProductionPoints(testMode, entities)
-    }
-
-    companion object {
-        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaProductionRepository {
-            return SofiaProductionRepository(apiService, sofiaDao)
-        }
-    }
-}
-
-fun GraphPoint.toProductionEntity(testMode: Boolean): ProductionPointEntity =
-    ProductionPointEntity(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity,
-        isTestMode = testMode
-    )
-
-fun ProductionPointEntity.toModel(): GraphPoint =
-    GraphPoint(
-        id = id,
-        timeFrom = timeFrom,
-        timeTo = timeTo,
-        quantity = quantity
-    )
-fun calculateTopProduction(points: List<GraphPoint>): TopWindows {
-    if (points.isEmpty()) return TopWindows.Empty
-
-    fun findMax(filteredPoints: List<GraphPoint>): TopPoint {
-        val maxPoint = filteredPoints.maxByOrNull { it.quantity }
-        return TopPoint(
-            maxQuantity = maxPoint?.quantity ?: 0.0,
-            maxDate = maxPoint?.timeFrom
-        )
-    }
-
-    val now = Instant.now()
-    val last7Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(7)) }
-    val last30Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(30)) }
-    val last90Days = points.filter { it.timeFrom >= now.minus(java.time.Duration.ofDays(90)) }
-
-    return TopWindows(
-        allTime = findMax(points),
-        last7Days = findMax(last7Days),
-        last30Days = findMax(last30Days),
-        last90Days = findMax(last90Days)
-    )
-}
-internal fun aggregateProduction(
-    entries: List<PnEntryDto>,
-    testMode: Boolean,
-): List<GraphPoint> {
-    if (entries.isEmpty()) return emptyList()
-    return entries
-        .groupBy { entry ->
-            Triple(entry.time_from, entry.time_to, entry.settlement_period)
-        }
-        .map { (_, groupedEntries) ->
-            val first = groupedEntries.first()
-            GraphPoint(
-                id = if (testMode) TEST_BMU else "SOFIA_TOTAL",
-                timeFrom = parseApiUtc(first.time_from),
-                timeTo = parseApiUtc(first.time_to),
-                quantity = groupedEntries.sumOf { it.level_mw },
-            )
-        }
-        .sortedBy { it.timeFrom }
-}
-
-private fun PnTopProductionWindowsDto.toTopWindows(): TopWindows =
-    TopWindows(
-        allTime = all_time.toTopPoint(),
-        last7Days = last_7_days.toTopPoint(),
-        last30Days = last_30_days.toTopPoint(),
-        last90Days = last_90_days.toTopPoint(),
-    )
-
-private fun PnTopProductionPointDto.toTopPoint(): TopPoint =
-    TopPoint(
-        maxQuantity = max_mw,
-        maxDate = parseApiInstant(max_date),
-    )
-
-===== Fichier: repository/SofiaRemitRepository.kt =====
-
-package com.lemarc.sofia.data.repository
-
-import com.lemarc.sofia.SOFIA_BMUS
-import com.lemarc.sofia.TEST_BMU
-import com.lemarc.sofia.data.api.RemitEntryDto
-import com.lemarc.sofia.data.api.SofiaApiService
-import com.lemarc.sofia.data.local.RemitNoticeEntity
-import com.lemarc.sofia.data.local.dao.SofiaDao
-import com.lemarc.sofia.data.model.RemitNotice
-import com.lemarc.sofia.util.parseApiInstant
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
-
-class SofiaRemitRepository(
-    private val apiService: SofiaApiService,
-    private val sofiaDao: SofiaDao,
-) {
-    fun observeRemits(testMode: Boolean): Flow<List<RemitNotice>> {
-        return sofiaDao.getRemitNotices(testMode).map { entities ->
-            entities.map { it.toModel() }
-        }
-    }
-
-    suspend fun refreshRemits(testMode: Boolean) = withContext(Dispatchers.IO) {
-        val bmus = if (testMode) listOf(TEST_BMU) else SOFIA_BMUS
-        val remits = bmus.map { bmuId ->
-            async {
-                apiService.getRemits(
-                    bmuId = bmuId,
-                    eventStatus = "Active",
-                    limit = 100,
-                    offset = 0,
-                )
-            }
-        }.awaitAll().flatten()
-
-        val notices = remits
-            .distinctBy { it.id }
-            .sortedByDescending { parseApiInstant(it.publish_time) ?: InstantMin }
-            .map { it.toEntity(testMode) }
-
-        sofiaDao.refreshRemitNotices(testMode, notices)
-    }
-
-    companion object {
-        fun create(apiService: SofiaApiService, sofiaDao: SofiaDao): SofiaRemitRepository {
-            return SofiaRemitRepository(apiService, sofiaDao)
-        }
-    }
-}
-
-fun RemitEntryDto.toEntity(testMode: Boolean): RemitNoticeEntity =
-    RemitNoticeEntity(
-        id = id,
-        mrid = mrid,
-        revisionNumber = revision_number,
-        bmuId = bmu_id,
-        participantId = participant_id,
-        assetId = asset_id,
-        unavailabilityType = unavailability_type,
-        eventType = event_type,
-        messageHeading = message_heading,
-        fuelType = fuel_type,
-        normalCapacityMw = normal_capacity_mw,
-        availableCapacityMw = available_capacity_mw,
-        unavailableCapacityMw = unavailable_capacity_mw,
-        eventStatus = event_status,
-        eventStartTime = parseApiInstant(event_start_time),
-        eventEndTime = parseApiInstant(event_end_time),
-        cause = cause,
-        relatedInformation = related_information,
-        publishTime = parseApiInstant(publish_time),
-        outageProfile = outage_profile,
-        isTestMode = testMode
-    )
-
-fun RemitNoticeEntity.toModel(): RemitNotice =
-    RemitNotice(
-        id = id,
-        mrid = mrid,
-        revisionNumber = revisionNumber,
-        bmuId = bmuId,
-        participantId = participantId,
-        assetId = assetId,
-        unavailabilityType = unavailabilityType,
-        eventType = eventType,
-        messageHeading = messageHeading,
-        fuelType = fuelType,
-        normalCapacityMw = normalCapacityMw,
-        availableCapacityMw = availableCapacityMw,
-        unavailableCapacityMw = unavailableCapacityMw,
-        eventStatus = eventStatus,
-        eventStartTime = eventStartTime,
-        eventEndTime = eventEndTime,
-        cause = cause,
-        relatedInformation = relatedInformation,
-        publishTime = publishTime,
-        outageProfile = outageProfile
-    )
-
-private fun toNotice(dto: RemitEntryDto): RemitNotice =
-    RemitNotice(
-        id = dto.id,
-        mrid = dto.mrid,
-        revisionNumber = dto.revision_number,
-        bmuId = dto.bmu_id,
-        participantId = dto.participant_id,
-        assetId = dto.asset_id,
-        unavailabilityType = dto.unavailability_type,
-        eventType = dto.event_type,
-        messageHeading = dto.message_heading,
-        fuelType = dto.fuel_type,
-        normalCapacityMw = dto.normal_capacity_mw,
-        availableCapacityMw = dto.available_capacity_mw,
-        unavailableCapacityMw = dto.unavailable_capacity_mw,
-        eventStatus = dto.event_status,
-        eventStartTime = parseApiInstant(dto.event_start_time),
-        eventEndTime = parseApiInstant(dto.event_end_time),
-        cause = dto.cause,
-        relatedInformation = dto.related_information,
-        publishTime = parseApiInstant(dto.publish_time),
-        outageProfile = dto.outage_profile,
-    )
-
-private val InstantMin = java.time.Instant.EPOCH
-===== Fichier: utils.kt =====
-
-package com.lemarc.sofia.data
-
-import com.lemarc.sofia.TimeWindow
-import com.lemarc.sofia.data.model.GraphPoint
-
-fun filterPoints(points: List<GraphPoint>, window: TimeWindow): List<GraphPoint> {
-    val duration = window.duration ?: return points
-    val lastTimestamp = points.lastOrNull()?.timeTo ?: return emptyList()
-    val threshold = lastTimestamp.minus(duration)
-    return points.filter { it.timeTo >= threshold }
-}
-===== Fichier: local/SofiaDatabase.kt =====
-
-package com.lemarc.sofia.data.local
-
-import android.content.Context
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
-import com.lemarc.sofia.data.local.dao.SofiaDao
-import java.time.Instant
-
-@Database(
-    entities = [
-        ProductionPointEntity::class,
-        B1610PointEntity::class,
-        WeatherPointEntity::class,
-        RemitNoticeEntity::class
-    ],
-    version = 1,
-    exportSchema = false
-)
-@TypeConverters(SofiaDatabase.Converters::class)
-abstract class SofiaDatabase : RoomDatabase() {
-    abstract fun sofiaDao(): SofiaDao
-
-    class Converters {
-        @TypeConverter
-        fun fromTimestamp(value: Long?): Instant? {
-            return value?.let { Instant.ofEpochMilli(it) }
-        }
-
-        @TypeConverter
-        fun dateToTimestamp(date: Instant?): Long? {
-            return date?.toEpochMilli()
-        }
-    }
-
-    companion object {
-        @Volatile
-        private var INSTANCE: SofiaDatabase? = null
-
-        fun getDatabase(context: Context): SofiaDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    SofiaDatabase::class.java,
-                    "sofia_database"
-                ).build()
-                INSTANCE = instance
-                instance
+                .frame(height: 180)
+            } else {
+                Chart(points) { pt in
+                    AreaMark(
+                        x: .value("Time", pt.time),
+                        y: .value("MW", pt.totalMw)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.02)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Time", pt.time),
+                        y: .value("MW", pt.totalMw)
+                    )
+                    .foregroundStyle(Color.blue)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                .chartYScale(domain: 0...maxMW)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: xStride)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: xFormat)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            Text("\(value.as(Double.self) ?? 0, specifier: "%.0f") MW")
+                                .font(.system(.caption2, design: .monospaced))
+                        }
+                    }
+                }
+                .frame(height: 200)
+                .chartScrollableAxes(.horizontal)
             }
         }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16)
+            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1))
+    }
+
+    private func hourLabel(_ h: Double) -> String {
+        switch h {
+        case 6:   return "6h"
+        case 24:  return "24h"
+        case 48:  return "48h"
+        case 168: return "7d"
+        case 0:   return "All"
+        default:  return "\(Int(h))h"
+        }
+    }
+
+    private var xStride: Calendar.Component {
+        vm.chartHours <= 24 ? .hour : .day
+    }
+
+    private var xFormat: Date.FormatStyle {
+        vm.chartHours <= 48
+            ? .dateTime.hour().minute()
+            : .dateTime.month(.abbreviated).day()
     }
 }
 
-===== Fichier: local/dao/SofiaDao.kt =====
+===== Fichier: components/TimestampsView.swift =====
 
-package com.lemarc.sofia.data.local.dao
+import SwiftUI
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Transaction
-import com.lemarc.sofia.data.local.B1610PointEntity
-import com.lemarc.sofia.data.local.ProductionPointEntity
-import com.lemarc.sofia.data.local.RemitNoticeEntity
-import com.lemarc.sofia.data.local.WeatherPointEntity
-import kotlinx.coroutines.flow.Flow
+struct TimestampsView: View {
+    @ObservedObject var vm: SofiaViewModel
 
-@Dao
-interface SofiaDao {
+    var body: some View {
+        VStack(spacing: 10) {
+            timestampRow(icon: "antenna.radiowaves.left.and.right",
+                         label: "API data up to", date: vm.lastAPIUpdate)
+            Divider()
+            timestampRow(icon: "clock.arrow.circlepath",
+                         label: "Last fetch", date: vm.lastFetch)
 
-    @Query("SELECT * FROM production_points WHERE isTestMode = :testMode ORDER BY timeFrom ASC")
-    fun getProductionPoints(testMode: Boolean): Flow<List<ProductionPointEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertProductionPoints(points: List<ProductionPointEntity>)
-
-    @Query("DELETE FROM production_points WHERE isTestMode = :testMode")
-    suspend fun clearProductionPoints(testMode: Boolean)
-
-    @Transaction
-    suspend fun refreshProductionPoints(testMode: Boolean, points: List<ProductionPointEntity>) {
-        clearProductionPoints(testMode)
-        insertProductionPoints(points)
+            HStack {
+                Circle().fill(Color.green).frame(width: 6, height: 6)
+                Text("Auto-refresh every 60 s")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    @Query("SELECT * FROM b1610_points WHERE isTestMode = :testMode ORDER BY timeFrom ASC")
-    fun getB1610Points(testMode: Boolean): Flow<List<B1610PointEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertB1610Points(points: List<B1610PointEntity>)
-
-    @Query("DELETE FROM b1610_points WHERE isTestMode = :testMode")
-    suspend fun clearB1610Points(testMode: Boolean)
-
-    @Transaction
-    suspend fun refreshB1610Points(testMode: Boolean, points: List<B1610PointEntity>) {
-        clearB1610Points(testMode)
-        insertB1610Points(points)
-    }
-
-    @Query("SELECT * FROM weather_points ORDER BY timeFrom ASC")
-    fun getWeatherPoints(): Flow<List<WeatherPointEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertWeatherPoints(points: List<WeatherPointEntity>)
-
-    @Query("DELETE FROM weather_points")
-    suspend fun clearWeatherPoints()
-
-    @Transaction
-    suspend fun refreshWeatherPoints(points: List<WeatherPointEntity>) {
-        clearWeatherPoints()
-        insertWeatherPoints(points)
-    }
-
-    @Query("SELECT * FROM remit_notices WHERE isTestMode = :testMode ORDER BY publishTime DESC")
-    fun getRemitNotices(testMode: Boolean): Flow<List<RemitNoticeEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRemitNotices(notices: List<RemitNoticeEntity>)
-
-    @Query("DELETE FROM remit_notices WHERE isTestMode = :testMode")
-    suspend fun clearRemitNotices(testMode: Boolean)
-
-    @Transaction
-    suspend fun refreshRemitNotices(testMode: Boolean, notices: List<RemitNoticeEntity>) {
-        clearRemitNotices(testMode)
-        insertRemitNotices(notices)
+    private func timestampRow(icon: String, label: String, date: Date?) -> some View {
+        HStack {
+            Image(systemName: icon).foregroundStyle(.blue)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Text(date.map {
+                $0.formatted(.dateTime.day().month(.abbreviated).hour().minute().second())
+            } ?? "—")
+            .font(.system(.caption, design: .monospaced))
+        }
     }
 }
 
-===== Fichier: local/Entities.kt =====
+===== Fichier: components/RemitDetailView.swift =====
 
-package com.lemarc.sofia.data.local
+import SofiaCore
+import SwiftUI
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import java.time.Instant
+struct RemitDetailView: View {
+    let remit: RemitResponse
 
-@Entity(tableName = "production_points")
-data class ProductionPointEntity(
-    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
-    val id: String,
-    val timeFrom: Instant,
-    val timeTo: Instant,
-    val quantity: Double,
-    val isTestMode: Boolean,
-)
+    var body: some View {
+        List {
+            Section("Event") {
+                row("Heading",    remit.messageHeading)
+                row("Type",       remit.eventType)
+                row("Status",     remit.eventStatus)
+                row("Fuel Type",  remit.fuelType)
+            }
 
-@Entity(tableName = "b1610_points")
-data class B1610PointEntity(
-    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
-    val id: String,
-    val timeFrom: Instant,
-    val timeTo: Instant,
-    val quantity: Double,
-    val isTestMode: Boolean,
-)
+            Section("Asset") {
+                row("BMU ID",          remit.bmuId)
+                row("Participant",     remit.participantId)
+                row("Asset ID",        remit.assetId)
+            }
 
-@Entity(tableName = "weather_points")
-data class WeatherPointEntity(
-    @PrimaryKey(autoGenerate = true) val localId: Int = 0,
-    val id: String,
-    val timeFrom: Instant,
-    val timeTo: Instant,
-    val quantity: Double,
-)
+            Section("Capacity (MW)") {
+                if let v = remit.normalCapacityMw      { row("Normal",      String(format: "%.1f MW", v)) }
+                if let v = remit.availableCapacityMw   { row("Available",   String(format: "%.1f MW", v)) }
+                if let v = remit.unavailableCapacityMw { row("Unavailable", String(format: "%.1f MW", v)) }
+                if let v = remit.capacityReductionMw   { row("Reduction",   String(format: "%.1f MW", v)) }
+            }
 
-@Entity(tableName = "remit_notices")
-data class RemitNoticeEntity(
-    @PrimaryKey val id: Int,
-    val mrid: String,
-    val revisionNumber: Int,
-    val bmuId: String,
-    val participantId: String,
-    val assetId: String,
-    val unavailabilityType: String,
-    val eventType: String,
-    val messageHeading: String,
-    val fuelType: String,
-    val normalCapacityMw: Double?,
-    val availableCapacityMw: Double?,
-    val unavailableCapacityMw: Double?,
-    val eventStatus: String,
-    val eventStartTime: Instant?,
-    val eventEndTime: Instant?,
-    val cause: String,
-    val relatedInformation: String,
-    val publishTime: Instant?,
-    val outageProfile: String,
-    val isTestMode: Boolean,
-)
+            Section("Timeline") {
+                if let d = remit.eventStartTime { row("Start",     formatted(d)) }
+                if let d = remit.eventEndTime   { row("End",       formatted(d)) }
+                if let d = remit.publishTime    { row("Published", formatted(d)) }
+                row("Revision", String(remit.revisionNumber))
+            }
 
-===== Fichier: model/Model.kt =====
+            if !remit.cause.isEmpty {
+                Section("Cause") {
+                    Text(remit.cause).font(.subheadline)
+                }
+            }
 
-package com.lemarc.sofia.data.model
+            if !remit.relatedInformation.isEmpty {
+                Section("Related Information") {
+                    Text(remit.relatedInformation).font(.subheadline)
+                }
+            }
+        }
+        .navigationTitle("REMIT #\(remit.id)")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 
-import java.time.Instant
+    private func row(_ label: String, _ value: String) -> some View {
+        LabeledContent(label, value: value)
+    }
 
-data class GraphPoint(
-    val id: String,
-    val timeFrom: Instant,
-    val timeTo: Instant,
-    val quantity: Double,
-)
+    private func formatted(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .medium
+        fmt.timeStyle = .short
+        return fmt.string(from: date)
+    }
+}
 
-data class B1610Snapshot(
-    val points: List<GraphPoint>,
-    val latestDataTimestamp: Instant?,
-    val topB1610: TopWindows,
-)
+===== Fichier: components/ProductionRingCard.swift =====
 
-data class WeatherSnapshot(
-    val points: List<GraphPoint>,
-    val latestWindSpeed: Double?,
-    val latestDataTimestamp: Instant?,
-)
+import SwiftUI
 
-data class ProductionSnapshot(
-    val points: List<GraphPoint>,
-    val currentMw: Double,
-    val latestDataTimestamp: Instant?,
-    val topProduction: TopWindows,
-)
+struct ProductionRingCard: View {
+    @ObservedObject var vm: SofiaViewModel
 
-data class TopPoint(
-    val maxQuantity: Double,
-    val maxDate: Instant?,
-)
+    var body: some View {
+        VStack(spacing: 20) {
 
-data class TopWindows(
-    val allTime: TopPoint,
-    val last7Days: TopPoint,
-    val last30Days: TopPoint,
-    val last90Days: TopPoint,
-) {
-    companion object {
-        val Empty = TopWindows(
-            allTime = TopPoint(0.0, null),
-            last7Days = TopPoint(0.0, null),
-            last30Days = TopPoint(0.0, null),
-            last90Days = TopPoint(0.0, null),
+            // Ring gauge
+            ZStack {
+                // Background ring
+                Circle()
+                    .stroke(Color.blue.opacity(0.12), lineWidth: 22)
+                    .frame(width: 200, height: 200)
+
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: vm.capacityFactor)
+                    .stroke(
+                        AngularGradient(
+                            colors: [.cyan, .blue, .indigo],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
+                        style: StrokeStyle(lineWidth: 22, lineCap: .round)
+                    )
+                    .frame(width: 200, height: 200)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(duration: 1.0), value: vm.capacityFactor)
+
+                // Center text
+                VStack(spacing: 2) {
+                    Text(vm.totalMW, format: .number.precision(.fractionLength(1)))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+                    Text("MW")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Text(vm.capacityFactor, format: .percent.precision(.fractionLength(1)))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+
+            // Capacity label
+            Text("of \(Int(vm.capacityMW)) MW capacity")
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.blue.opacity(0.2), lineWidth: 1)
         )
     }
 }
-
-data class RemitNotice(
-    val id: Int,
-    val mrid: String,
-    val revisionNumber: Int,
-    val bmuId: String,
-    val participantId: String,
-    val assetId: String,
-    val unavailabilityType: String,
-    val eventType: String,
-    val messageHeading: String,
-    val fuelType: String,
-    val normalCapacityMw: Double?,
-    val availableCapacityMw: Double?,
-    val unavailableCapacityMw: Double?,
-    val eventStatus: String,
-    val eventStartTime: Instant?,
-    val eventEndTime: Instant?,
-    val cause: String,
-    val relatedInformation: String,
-    val publishTime: Instant?,
-    val outageProfile: String,
-)
-===== Fichier: api/SofiaApiService.kt =====
-
-package com.lemarc.sofia.data.api
-
-import retrofit2.http.GET
-import retrofit2.http.Path
-import retrofit2.http.Query
-
-interface SofiaApiService {
-    @GET("pn/{bmuId}")
-    suspend fun getProduction(
-        @Path("bmuId") bmuId: String,
-        @Query("time_from") timeFrom: String,
-        @Query("time_to") timeTo: String,
-    ): List<PnEntryDto>
-
-    @GET("pn/top-production")
-    suspend fun getTopProduction(): PnTopProductionWindowsDto
-
-    @GET("remit")
-    suspend fun getRemits(
-        @Query("bmu_id") bmuId: String? = null,
-        @Query("event_status") eventStatus: String? = null,
-        @Query("limit") limit: Int = 100,
-        @Query("offset") offset: Int = 0,
-    ): List<RemitEntryDto>
-
-    @GET("weather")
-    suspend fun getWeather(
-        @Query("time_from") timeFrom: String,
-        @Query("time_to") timeTo: String,
-    ): List<WeatherEntryDto>
-
-    @GET("b1610/{bmuId}")
-    suspend fun getB1610(
-        @Path("bmuId") bmuId: String,
-        @Query("time_from") timeFrom: String,
-        @Query("time_to") timeTo: String,
-    ): List<B1610EntryDto>
-
-    @GET("b1610/top-production")
-    suspend fun getB1610TopProduction(): B1610TopProductionWindowsDto
-
-}
-
-data class PnEntryDto(
-    val bmu_id: String,
-    val time_from: String,
-    val time_to: String,
-    val settlement_period: Int,
-    val level_mw: Double,
-    val source: String,
-)
-
-data class PnTopProductionPointDto(
-    val max_mw: Double,
-    val max_date: String?,
-)
-
-data class PnTopProductionWindowsDto(
-    val all_time: PnTopProductionPointDto,
-    val last_7_days: PnTopProductionPointDto,
-    val last_30_days: PnTopProductionPointDto,
-    val last_90_days: PnTopProductionPointDto,
-)
-
-data class RemitEntryDto(
-    val id: Int,
-    val mrid: String,
-    val revision_number: Int,
-    val bmu_id: String,
-    val participant_id: String,
-    val asset_id: String,
-    val unavailability_type: String,
-    val event_type: String,
-    val message_heading: String,
-    val fuel_type: String,
-    val normal_capacity_mw: Double?,
-    val available_capacity_mw: Double?,
-    val unavailable_capacity_mw: Double?,
-    val event_status: String,
-    val event_start_time: String?,
-    val event_end_time: String?,
-    val cause: String,
-    val related_information: String,
-    val publish_time: String?,
-    val outage_profile: String,
-)
-
-data class WeatherEntryDto(
-    val time_from: String,
-    val time_to: String,
-    val wind_speed: Double,
-    val source: String,
-)
-
-data class B1610EntryDto(
-    val bmu_id: String,
-    val time_from: String,
-    val time_to: String,
-    val quantity: Double,
-    val settlement_period: Int,
-)
-
-data class B1610TopProductionPointDto(
-    val quantity: Double,
-    val max_date: String?,
-)
-
-data class B1610TopProductionWindowsDto(
-    val all_time: B1610TopProductionPointDto,
-    val last_7_days: B1610TopProductionPointDto,
-    val last_30_days: B1610TopProductionPointDto,
-    val last_90_days: B1610TopProductionPointDto,
-)

@@ -3,11 +3,12 @@
 # === PARAMÈTRES ===
 # /Users/marc/StudioProjects/Sofia_Android/app/src/main/java/com/lemarc/sofia
 # /Users/marc/Desktop/Sofia/SofiaCore/Sources/SofiaCore
-racine="/Users/marc/StudioProjects/Sofia_Android/app/src/main/java/com/lemarc/sofia/data"
-dossierSortie="/Users/marc/Desktop/Sofia/dev"
+racine="/home/marcb/Sofia_iOS/Sofia"
+dossierSortie="/home/marcb/Sofia_iOS/dev"
 profondeur=-1   # -1 = pas de limite, 1 = un seul niveau
 
 dossiersIgnores=(
+    "Assets.xcassets"
     "node_modules"
     ".git"
     "__pycache__"
@@ -18,11 +19,7 @@ dossiersIgnores=(
 )
 
 extensionsAutorisees=(
-    ".pyazeazeaz"
-    ".js"
-    ".json"
     ".swift"
-    ".kt"
 )
 
 # =========================================================
@@ -153,10 +150,10 @@ main() {
     local cheminArborescence="$dossierSortie/arborescence.txt"
     local cheminConcatenation="$dossierSortie/concatenation-data.txt"
 
-    {
-        echo "$racine"
-        generate_tree "$racine" "" 0
-    } > "$cheminArborescence"
+#    {
+#        echo "$racine"
+#        generate_tree "$racine" "" 0
+#    } > "$cheminArborescence"
 
     echo "Arborescence enregistrée avec succès dans : $cheminArborescence"
 
