@@ -45,8 +45,8 @@ public enum SofiaConstants {
     /// Equivalent to Android's HISTORY_START.
     public static let historyStart: Date = {
         var components = DateComponents()
-        components.year = 2024
-        components.month = 1
+        components.year = 2026
+        components.month = 4
         components.day = 1
         components.hour = 0
         components.minute = 0
