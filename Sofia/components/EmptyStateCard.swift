@@ -1,3 +1,11 @@
+//
+//  EmptyStateCard.swift
+//  Sofia
+//
+//  Created by Marc Brunet on 15/06/2026.
+//
+
+
 import SwiftUI
 
 struct EmptyStateCard: View {
@@ -18,7 +26,7 @@ struct EmptyStateCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(Color(.secondarySystemBackground))
+        .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(radius: 2)
     }

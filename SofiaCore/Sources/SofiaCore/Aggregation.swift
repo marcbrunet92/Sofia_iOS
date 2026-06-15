@@ -30,14 +30,6 @@ public extension Array where Element == PnResponse {
     /// Legacy helper kept for compatibility: aggregates by timeFrom only.
     /// Prefer `aggregatedProductionPoints(seriesId:)` which groups by
     /// (timeFrom, timeTo, settlementPeriod) like the Android implementation.
-    func aggregatedHistory() -> [AggregatedPoint] {
-        let buckets = reduce(into: [Date: Double]()) { result, point in
-            result[point.timeFrom, default: 0] += point.levelMw
-        }
-        return buckets
-            .map { AggregatedPoint(time: $0.key, totalMw: $0.value) }
-            .sorted { $0.time < $1.time }
-    }
 
     /// Aggregates production entries across BMUs into a single series of GraphPoints,
     /// summing levelMw for entries sharing the same (timeFrom, timeTo, settlementPeriod).

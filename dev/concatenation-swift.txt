@@ -1,415 +1,916 @@
-/Users/marc/Desktop/Sofia/SofiaCore/Sources/SofiaCore
-├── Aggregation.swift
-├── Models.swift
-└── SofiaAPIService.swift
 
-===== Fichier: SofiaAPIService.swift =====
+===== Fichier: ViewModels/SofiaViewModel.swift =====
 
-import Foundation
+import SwiftUI
+import Combine
+import SofiaCore
 
-public enum APIError: LocalizedError {
-    case badURL
-    case networkError(Error)
-    case decodingError(Error)
-    case serverError(Int)
+@MainActor
+class SofiaViewModel: ObservableObject {
 
-    public var errorDescription: String? {
-        switch self {
-        case .badURL:                  return "Invalid URL"
-        case .networkError(let e):     return "Network error: \(e.localizedDescription)"
-        case .decodingError(let e):    return "Decoding error: \(e.localizedDescription)"
-        case .serverError(let code):   return "Server error: HTTP \(code)"
+    // MARK: - Settings
+    @AppStorage("testMode") var testMode: Bool = false {
+        didSet { Task { await refresh() } }
+    }
+
+    var mode: AppMode { testMode ? .test : .normal }
+
+    // MARK: - Published state
+    @Published var totalMW: Double = 0
+    @Published var perBMU: [String: Double] = [:]
+    @Published var history: [AggregatedPoint] = []
+
+    @Published var lastAPIUpdate: Date?
+    @Published var lastFetch: Date?
+
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    // MARK: - Chart window
+    @Published var chartHours: Double = 48
+
+    // MARK: - Private
+    private var timer: Timer?
+    private let refreshInterval: TimeInterval = 60
+
+    // MARK: - Init
+    init() {
+        Task { await refresh() }
+        startTimer()
+    }
+
+    deinit { timer?.invalidate() }
+
+    // MARK: - Public
+    func refresh() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let bmuIds = mode.bmuIds
+        let to   = Date()
+        let from = Calendar.current.date(from: DateComponents(year: 2026, month: 4, day: 1))!
+
+        do {
+            let allData: [PnResponse] = try await withThrowingTaskGroup(of: [PnResponse].self) { group in
+                for bmu in bmuIds {
+                    group.addTask {
+                        (try? await SofiaAPIService.shared.pnData(bmuId: bmu, from: from, to: to)) ?? []
+                    }
+                }
+                var results: [PnResponse] = []
+                for try await r in group { results.append(contentsOf: r) }
+                return results
+            }
+
+            // Latest value per BMU
+            let latestPerBMU = allData.latestPerBMU()
+            perBMU = latestPerBMU.mapValues(\.levelMw)
+            totalMW = perBMU.values.reduce(0, +)
+            history = allData.aggregatedHistory()
+
+            lastFetch = Date()
+            
+            await refreshRemits()
+
+            await refreshTopProduction()
+
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Filtered history for chart window
+    var visibleHistory: [AggregatedPoint] {
+        guard !history.isEmpty else { return [] }
+        if chartHours == 0 { return history }
+        let cutoff = Date().addingTimeInterval(-chartHours * 3600)
+        let filtered = history.filter { $0.time >= cutoff }
+        return filtered.isEmpty ? history : filtered
+    }
+    var capacityMW: Double { mode.capacityMW }
+
+    var capacityFactor: Double { min(totalMW / capacityMW, 1.0) }
+
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { await self.refresh() }
+        }
+    }
+    
+    @Published var remits: [RemitResponse] = []
+    @Published var isLoadingRemits = false
+    @Published var remitError: String?
+
+    func refreshRemits() async {
+        isLoadingRemits = true
+        remitError = nil
+        defer { isLoadingRemits = false }
+
+        do {
+            var all: [RemitResponse] = []
+            for bmuId in mode.bmuIds {
+                let results = (try? await SofiaAPIService.shared.listRemits(bmuId: bmuId, limit: 100)) ?? []
+                all.append(contentsOf: results)
+            }
+            // Sort: active first, then by most recent publish time
+            remits = all.sorted {
+                if $0.isCurrentlyActive != $1.isCurrentlyActive { return $0.isCurrentlyActive }
+                return ($0.publishTime ?? .distantPast) > ($1.publishTime ?? .distantPast)
+            }
+        } catch {
+            remitError = error.localizedDescription
+        }
+    }
+    // MARK: - Records
+    @Published var topProduction: PnTopProductionWindows?
+    @Published var isLoadingRecords = false
+
+    func refreshTopProduction() async {
+        isLoadingRecords = true
+        defer { isLoadingRecords = false }
+        topProduction = try? await SofiaAPIService.shared.topProduction()
+    }
+}
+
+===== Fichier: SofiaApp.swift =====
+
+import SwiftUI
+
+@main
+struct SofiaApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
         }
     }
 }
 
-public actor SofiaAPIService {
-    public static let shared = SofiaAPIService()
+===== Fichier: components/ProductionRingCard.swift =====
 
-    public let baseURL = "https://sofia.lemarc.fr"
+import SwiftUI
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
-            let str = try container.decode(String.self)
+struct ProductionRingCard: View {
+    @ObservedObject var vm: SofiaViewModel
 
-            let withTZ = ISO8601DateFormatter()
-            withTZ.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = withTZ.date(from: str) { return date }
+    var body: some View {
+        VStack(spacing: 20) {
 
-            let withTZNoFrac = ISO8601DateFormatter()
-            withTZNoFrac.formatOptions = [.withInternetDateTime]
-            if let date = withTZNoFrac.date(from: str) { return date }
+            // Ring gauge
+            ZStack {
+                // Background ring
+                Circle()
+                    .stroke(Color.blue.opacity(0.12), lineWidth: 22)
+                    .frame(width: 200, height: 200)
 
-            let noTZ = DateFormatter()
-            noTZ.locale = Locale(identifier: "en_US_POSIX")
-            noTZ.timeZone = TimeZone(identifier: "UTC")
-            noTZ.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-            if let date = noTZ.date(from: str) { return date }
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: vm.capacityFactor)
+                    .stroke(
+                        AngularGradient(
+                            colors: [.cyan, .blue, .indigo],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
+                        style: StrokeStyle(lineWidth: 22, lineCap: .round)
+                    )
+                    .frame(width: 200, height: 200)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(duration: 1.0), value: vm.capacityFactor)
 
-            throw DecodingError.dataCorruptedError(in: container,
-                debugDescription: "Cannot parse date: \(str)")
+                // Center text
+                VStack(spacing: 2) {
+                    Text(vm.totalMW, format: .number.precision(.fractionLength(1)))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+                    Text("MW")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Text(vm.capacityFactor, format: .percent.precision(.fractionLength(1)))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+
+            // Capacity label
+            Text("of \(Int(vm.capacityMW)) MW capacity")
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.secondary)
         }
-        return d
-    }()
-
-    public init() {}
-
-    // MARK: - PN: data for a BMU over a time range
-
-    public func pnData(bmuId: String, from: Date, to: Date) async throws -> [PnResponse] {
-        let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withInternetDateTime]
-        var components = URLComponents(string: "\(baseURL)/pn/\(bmuId)")!
-        components.queryItems = [
-            URLQueryItem(name: "time_from", value: fmt.string(from: from)),
-            URLQueryItem(name: "time_to",   value: fmt.string(from: to))
-        ]
-        guard let url = components.url else { throw APIError.badURL }
-        return try await fetch(url: url)
-    }
-
-    // MARK: - PN: latest settlement period for a BMU
-
-    public func latestSettlement(for bmuId: String) async throws -> PnLatestSettlementPeriod {
-        var components = URLComponents(string: "\(baseURL)/pn/latest-settlement-period")!
-        components.queryItems = [URLQueryItem(name: "bmu_id", value: bmuId)]
-        guard let url = components.url else { throw APIError.badURL }
-        return try await fetch(url: url)
-    }
-    // MARK: - PN: date range available in the database
-
-    public func pnDateRange() async throws -> PnDateRange {
-        guard let url = URL(string: "\(baseURL)/pn/date-range") else {
-            throw APIError.badURL
-        }
-        return try await fetch(url: url)
-    }
-
-    // MARK: - PN: all-time / 7d / 30d / 90d production records
-
-    public func topProduction() async throws -> PnTopProductionWindows {
-        guard let url = URL(string: "\(baseURL)/pn/top-production") else {
-            throw APIError.badURL
-        }
-        return try await fetch(url: url)
-    }
-    // MARK: - REMIT: list with optional filters
-
-    /// Fetches a paginated list of REMIT notices.
-    /// - Parameters:
-    ///   - bmuId: Filter to a specific BMU (pass `nil` for all).
-    ///   - eventStatus: e.g. `"Active"`, `"Dismissed"` (pass `nil` for all).
-    ///   - limit: Page size (max 500, default 100).
-    ///   - offset: Pagination offset (default 0).
-    public func listRemits(
-        bmuId: String?       = nil,
-        eventStatus: String? = nil,
-        limit: Int           = 100,
-        offset: Int          = 0
-    ) async throws -> [RemitResponse] {
-        var components = URLComponents(string: "\(baseURL)/remit")!
-        var items: [URLQueryItem] = [
-            URLQueryItem(name: "limit",  value: String(limit)),
-            URLQueryItem(name: "offset", value: String(offset))
-        ]
-        if let bmuId       { items.append(URLQueryItem(name: "bmu_id",       value: bmuId)) }
-        if let eventStatus { items.append(URLQueryItem(name: "event_status", value: eventStatus)) }
-        components.queryItems = items
-        guard let url = components.url else { throw APIError.badURL }
-        return try await fetch(url: url)
-    }
-
-    // MARK: - REMIT: currently active notices for a BMU
-
-    public func activeRemits(for bmuId: String) async throws -> [RemitResponse] {
-        guard let url = URL(string: "\(baseURL)/remit/active/\(bmuId)") else {
-            throw APIError.badURL
-        }
-        return try await fetch(url: url)
-    }
-
-    // MARK: - REMIT: single notice by ID
-
-    public func remit(id: Int) async throws -> RemitResponse {
-        guard let url = URL(string: "\(baseURL)/remit/\(id)") else {
-            throw APIError.badURL
-        }
-        return try await fetch(url: url)
-    }
-
-    // MARK: - REMIT: force refresh from Elexon
-
-    /// Triggers an immediate re-fetch of all active REMIT records from the Elexon API.
-    /// Returns the raw server response (number of persisted records, etc.).
-    @discardableResult
-    public func refreshRemits() async throws -> Data {
-        guard let url = URL(string: "\(baseURL)/remit/refresh") else {
-            throw APIError.badURL
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw APIError.networkError(error)
-        }
-        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            throw APIError.serverError(http.statusCode)
-        }
-        return data
-    }
-
-    // MARK: - Generic fetch + decode
-
-    private func fetch<T: Decodable>(url: URL) async throws -> T {
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(from: url)
-        } catch {
-            throw APIError.networkError(error)
-        }
-        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            throw APIError.serverError(http.statusCode)
-        }
-        do {
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            throw APIError.decodingError(error)
-        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.blue.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
-===== Fichier: Aggregation.swift =====
+===== Fichier: components/RemitDetailView.swift =====
 
-import Foundation
+import SofiaCore
+import SwiftUI
 
-// SofiaCore — PnResponse+Aggregation.swift
-public extension Array where Element == PnResponse {
+struct RemitDetailView: View {
+    let remit: RemitResponse
 
-    func latestPerBMU() -> [String: PnResponse] {
-        reduce(into: [:]) { result, point in
-            if let existing = result[point.bmuId] {
-                if point.timeFrom > existing.timeFrom { result[point.bmuId] = point }
+    var body: some View {
+        List {
+            Section("Event") {
+                row("Heading",    remit.messageHeading)
+                row("Type",       remit.eventType)
+                row("Status",     remit.eventStatus)
+                row("Fuel Type",  remit.fuelType)
+            }
+
+            Section("Asset") {
+                row("BMU ID",          remit.bmuId)
+                row("Participant",     remit.participantId)
+                row("Asset ID",        remit.assetId)
+            }
+
+            Section("Capacity (MW)") {
+                if let v = remit.normalCapacityMw      { row("Normal",      String(format: "%.1f MW", v)) }
+                if let v = remit.availableCapacityMw   { row("Available",   String(format: "%.1f MW", v)) }
+                if let v = remit.unavailableCapacityMw { row("Unavailable", String(format: "%.1f MW", v)) }
+                if let v = remit.capacityReductionMw   { row("Reduction",   String(format: "%.1f MW", v)) }
+            }
+
+            Section("Timeline") {
+                if let d = remit.eventStartTime { row("Start",     formatted(d)) }
+                if let d = remit.eventEndTime   { row("End",       formatted(d)) }
+                if let d = remit.publishTime    { row("Published", formatted(d)) }
+                row("Revision", String(remit.revisionNumber))
+            }
+
+            if !remit.cause.isEmpty {
+                Section("Cause") {
+                    Text(remit.cause).font(.subheadline)
+                }
+            }
+
+            if !remit.relatedInformation.isEmpty {
+                Section("Related Information") {
+                    Text(remit.relatedInformation).font(.subheadline)
+                }
+            }
+        }
+        .navigationTitle("REMIT #\(remit.id)")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        LabeledContent(label, value: value)
+    }
+
+    private func formatted(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .medium
+        fmt.timeStyle = .short
+        return fmt.string(from: date)
+    }
+}
+
+===== Fichier: components/RecordsCardView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RecordsCardView: View {
+
+    let windows: PnTopProductionWindows?
+    let isLoading: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+
+            // Header
+            HStack {
+                Label("Production Records", systemImage: "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if isLoading {
+                    ProgressView().scaleEffect(0.75)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            // Rows
+            if let w = windows {
+                VStack(spacing: 0) {
+                    RecordRow(label: "All time",   point: w.allTime,    accent: .yellow)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 90 d",  point: w.last90Days, accent: .orange)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 30 d",  point: w.last30Days, accent: .blue)
+                    Divider().padding(.leading, 16)
+                    RecordRow(label: "Last 7 d",   point: w.last7Days,  accent: .green)
+                }
+            } else if !isLoading {
+                Text("No data available")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
             } else {
-                result[point.bmuId] = point
+                Color.clear.frame(height: 80)
+            }
+        }
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Single row
+
+private struct RecordRow: View {
+
+    let label: String
+    let point: PnTopProductionPoint
+    let accent: Color
+
+    private var dateText: String {
+        guard let d = point.maxDate else { return "–" }
+        return d.formatted(.dateTime.day().month(.abbreviated).year().hour().minute())
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+
+            // Accent dot
+            Circle()
+                .fill(accent)
+                .frame(width: 8, height: 8)
+
+            // Label
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(width: 72, alignment: .leading)
+
+            Spacer()
+
+            // Value
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(point.maxMw.formatted(.number.precision(.fractionLength(0))) + " MW")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Text(dateText)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    let pt = { (mw: Double, iso: String) in
+        PnTopProductionPoint(
+            maxMw: mw,
+            maxDate: ISO8601DateFormatter().date(from: iso)
+        )
+    }
+    let windows = PnTopProductionWindows(
+        allTime:    pt(1398, "2026-04-12T14:00:00Z"),
+        last7Days:  pt(1201, "2026-05-22T09:30:00Z"),
+        last30Days: pt(1350, "2026-05-01T11:00:00Z"),
+        last90Days: pt(1390, "2026-04-15T16:00:00Z")
+    )
+    return RecordsCardView(windows: windows, isLoading: false)
+        .padding()
+        .background(Color(.systemGroupedBackground))
+}
+
+===== Fichier: components/RemitRowView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RemitRowView: View {
+    let remit: RemitResponse
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Status dot
+            Circle()
+                .fill(remit.isCurrentlyActive ? .orange : .secondary)
+                .frame(width: 10, height: 10)
+                .padding(.top, 5)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(remit.messageHeading)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(2)
+                    Spacer()
+                    statusBadge
+                }
+
+                Text(remit.bmuId)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let start = remit.eventStartTime {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                        Text(eventWindow(start: start, end: remit.eventEndTime))
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+
+                if let available = remit.availableCapacityMw {
+                    Label("\(Int(available)) MW available", systemImage: "arrow.down.circle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        Text(remit.eventStatus)
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(badgeColor.opacity(0.15), in: Capsule())
+            .foregroundStyle(badgeColor)
+    }
+
+    private var badgeColor: Color {
+        switch remit.eventStatus.lowercased() {
+        case "active":    return .orange
+        case "dismissed": return .secondary
+        default:          return .blue
+        }
+    }
+
+    private func eventWindow(start: Date, end: Date?) -> String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .short
+        fmt.timeStyle = .short
+        let startStr = fmt.string(from: start)
+        let endStr = end.map { fmt.string(from: $0) } ?? "ongoing"
+        return "\(startStr) → \(endStr)"
+    }
+}
+
+===== Fichier: components/TimestampsView.swift =====
+
+import SwiftUI
+
+struct TimestampsView: View {
+    @ObservedObject var vm: SofiaViewModel
+
+    var body: some View {
+        VStack(spacing: 10) {
+            timestampRow(icon: "antenna.radiowaves.left.and.right",
+                         label: "API data up to", date: vm.lastAPIUpdate)
+            Divider()
+            timestampRow(icon: "clock.arrow.circlepath",
+                         label: "Last fetch", date: vm.lastFetch)
+
+            HStack {
+                Circle().fill(Color.green).frame(width: 6, height: 6)
+                Text("Auto-refresh every 60 s")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func timestampRow(icon: String, label: String, date: Date?) -> some View {
+        HStack {
+            Image(systemName: icon).foregroundStyle(.blue)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Text(date.map {
+                $0.formatted(.dateTime.day().month(.abbreviated).hour().minute().second())
+            } ?? "—")
+            .font(.system(.caption, design: .monospaced))
+        }
+    }
+}
+
+===== Fichier: components/ProductionChartView.swift =====
+
+import SwiftUI
+import Charts
+import SofiaCore
+
+struct ProductionChartView: View {
+    @ObservedObject var vm: SofiaViewModel
+
+    private var points: [AggregatedPoint] { vm.visibleHistory }
+
+    private var maxMW: Double {
+        max((points.map(\.totalMw).max() ?? 100) * 1.15, 10)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+
+            // Header
+            HStack {
+                Text("Production History")
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+                // Window selector
+                HStack(spacing: 4) {
+                    ForEach([6.0, 24.0, 48.0, 168.0, 0.0], id: \.self) { h in
+                        Button(hourLabel(h)) {
+                            withAnimation { vm.chartHours = h }
+                        }
+                        .font(.system(.caption2, design: .rounded, weight: .semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(vm.chartHours == h ? Color.blue : Color.blue.opacity(0.1),
+                                    in: Capsule())
+                        .foregroundStyle(vm.chartHours == h ? .white : .blue)
+                    }
+                }
+            }
+
+            if points.isEmpty {
+                ContentUnavailableView(
+                    "No data",
+                    systemImage: "waveform.slash",
+                    description: Text("No production data for this window")
+                )
+                .frame(height: 180)
+            } else {
+                Chart(points) { pt in
+                    AreaMark(
+                        x: .value("Time", pt.time),
+                        y: .value("MW", pt.totalMw)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.02)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Time", pt.time),
+                        y: .value("MW", pt.totalMw)
+                    )
+                    .foregroundStyle(Color.blue)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                .chartYScale(domain: 0...maxMW)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: xStride)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: xFormat)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            Text("\(value.as(Double.self) ?? 0, specifier: "%.0f") MW")
+                                .font(.system(.caption2, design: .monospaced))
+                        }
+                    }
+                }
+                .frame(height: 200)
+                .chartScrollableAxes(.horizontal)
+            }
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16)
+            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1))
+    }
+
+    private func hourLabel(_ h: Double) -> String {
+        switch h {
+        case 6:   return "6h"
+        case 24:  return "24h"
+        case 48:  return "48h"
+        case 168: return "7d"
+        case 0:   return "All"
+        default:  return "\(Int(h))h"
+        }
+    }
+
+    private var xStride: Calendar.Component {
+        vm.chartHours <= 24 ? .hour : .day
+    }
+
+    private var xFormat: Date.FormatStyle {
+        vm.chartHours <= 48
+            ? .dateTime.hour().minute()
+            : .dateTime.month(.abbreviated).day()
+    }
+}
+
+===== Fichier: components/CapacityText.swift =====
+
+import SwiftUI
+
+struct CapacityText: View {
+    let label: String
+    let valueMw: Double?
+
+    private var formattedValue: String {
+        guard let valueMw else { return "—" }
+        return String(Int(valueMw.rounded()))
+    }
+
+    var body: some View {
+        Text("\(label): \(formattedValue) MW")
+            .font(.caption)
+    }
+}
+
+===== Fichier: utils.swift =====
+
+import Foundation
+import SofiaCore
+
+/// Mirrors Android's `timestampFormatter` (yyyy-MM-dd HH:mm 'UTC', UTC zone).
+let timestampFormatter: DateFormatter = {
+    let fmt = DateFormatter()
+    fmt.dateFormat = "yyyy-MM-dd HH:mm 'UTC'"
+    fmt.timeZone = TimeZone(identifier: "UTC")
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    return fmt
+}()
+
+extension Date {
+    /// Formats this date using `timestampFormatter`, e.g. "2026-06-13 14:30 UTC".
+    func asTimestamp() -> String {
+        timestampFormatter.string(from: self)
+    }
+}
+
+extension Optional where Wrapped == Date {
+    /// Returns the formatted timestamp, or "—" if nil.
+    func asTimestampOrDash() -> String {
+        self?.asTimestamp() ?? "—"
+    }
+}
+
+/// Mirrors Android's `shortAxisFormatter(tw: TimeWindow)`: returns a DateFormatter
+/// using UTC and a pattern depending on the selected time window.
+func shortAxisFormatter(for window: TimeWindow) -> DateFormatter {
+    let fmt = DateFormatter()
+    fmt.dateFormat = window.axisDateFormat
+    fmt.timeZone = TimeZone(identifier: "UTC")
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    return fmt
+}
+===== Fichier: Views/SettingsView.swift =====
+
+import SwiftUI
+
+struct SettingsView: View {
+    @ObservedObject var vm: SofiaViewModel
+    @State private var showVisual = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                // Test mode section
+                Section {
+                    Toggle(isOn: $vm.testMode) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Mode")
+                                .font(.body)
+                            Text("Use T_HEYM11 instead of Sofia BMUs")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.yellow)
+
+                    if vm.testMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                            Text("Active — showing HEYM11 data only")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Mode")
+                } footer: {
+                    Text("In normal mode, the app aggregates the four Sofia BMUs (T_SOFOW-11/12/21/22) as a single 1400 MW wind farm. Test mode displays the adjacent T_HEYM11 unit, which has real production data while Sofia is under construction.")
+                }
+
+                // Visualisation section
+                Section("Visualisation") {
+                    Link(destination: URL(string: "https://sofia.lemarc.fr/visual/pn")!) {
+                        HStack {
+                            Image(systemName: "chart.xyaxis.line")
+                                .foregroundStyle(.blue)
+                            Text("Open full PN chart (browser)")
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                }
+
+                // About section
+                Section("About") {
+                    LabeledContent("API", value: "sofia.lemarc.fr")
+                    LabeledContent("Normal BMUs", value: "SOFOW-11/12/21/22")
+                    LabeledContent("Test BMU", value: "HEYM11")
+                    LabeledContent("Max capacity", value: "1400 MW")
+                }
+            }
+            .navigationTitle("Settings")
+        }
+    }
+}
+
+===== Fichier: Views/RemitView.swift =====
+
+import SwiftUI
+import SofiaCore
+
+struct RemitView: View {
+    @ObservedObject var vm: SofiaViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if vm.isLoadingRemits && vm.remits.isEmpty {
+                    ProgressView("Loading notices…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if vm.remits.isEmpty {
+                    ContentUnavailableView(
+                        "No REMIT Notices",
+                        systemImage: "bell.slash",
+                        description: Text("No outage notices found for \(vm.mode.displayName).")
+                    )
+                } else {
+                    List(vm.remits) { remit in
+                        NavigationLink(destination: RemitDetailView(remit: remit)) {
+                            RemitRowView(remit: remit)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                    .refreshable { await vm.refreshRemits() }
+                }
+            }
+            .navigationTitle("REMIT Notices")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if vm.isLoadingRemits {
+                        ProgressView()
+                    } else {
+                        Button {
+                            Task { await vm.refreshRemits() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let err = vm.remitError {
+                    Text(err)
+                        .font(.caption)
+                        .padding(8)
+                        .background(.red.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.white)
+                        .padding()
+                }
             }
         }
     }
+}
 
-    func aggregatedHistory() -> [AggregatedPoint] {
-        let buckets = reduce(into: [Date: Double]()) { result, point in
-            result[point.timeFrom, default: 0] += point.levelMw
+===== Fichier: Views/ProductionView.swift =====
+
+import SwiftUI
+
+struct DashboardView: View {
+    @ObservedObject var vm: SofiaViewModel
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+
+                    // Test mode banner
+                    if vm.testMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.black)
+                            Text("TEST MODE — displaying T_HEYM11 only")
+                                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.black)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.yellow, in: RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    // Error banner
+                    if let err = vm.errorMessage {
+                        HStack {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(err).font(.caption)
+                            Spacer()
+                            Button("OK") { vm.errorMessage = nil }.font(.caption)
+                        }
+                        .padding(10)
+                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    // Ring + total
+                    ProductionRingCard(vm: vm)
+
+                    // Chart
+                    ProductionChartView(vm: vm)
+                    
+                    RecordsCardView(
+                        windows: vm.topProduction,
+                        isLoading: vm.isLoadingRecords
+                    )
+                    
+                    // Timestamps
+                    TimestampsView(vm: vm)
+                        .padding(.bottom, 8)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
+            .navigationTitle(vm.testMode ? "Test Mode" : "Sofia Wind Farm")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await vm.refresh() }
+                    } label: {
+                        if vm.isLoading {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(vm.isLoading)
+                }
+            }
         }
-        return buckets
-            .map { AggregatedPoint(time: $0.key, totalMw: $0.value) }
-            .sorted { $0.time < $1.time }
     }
 }
 
-===== Fichier: Models.swift =====
+===== Fichier: Views/ContentView.swift =====
 
-import Foundation
+import SwiftUI
+import Charts
 
-// MARK: - BMU Groups
-public enum AppMode {
-    case normal   // Sofia farm: T_SOFOW-11/12/21/22 aggregated
-    case test     // Test mode: only T_HEYM11
+// MARK: - Main app with tab navigation
+struct ContentView: View {
+    @StateObject private var vm = SofiaViewModel()
 
-    public var bmuIds: [String] {
-        switch self {
-        case .normal: return ["T_SOFOW-11", "T_SOFOW-12", "T_SOFOW-21", "T_SOFOW-22"]
-        case .test:   return ["T_HEYM11"]
-        }
-    }
+    var body: some View {
+        TabView {
+            DashboardView(vm: vm)
+                .tabItem {
+                    Label("Production", systemImage: "bolt.fill")
+                }
+            
+            RemitView(vm: vm)
+                .tabItem {
+                    Label("Remit", systemImage: "exclamationmark.triangle.fill")
+                }
 
-    public var capacityMW: Double {
-        switch self {
-        case .normal: return 1400
-        case .test:   return 1400
-        }
-    }
-
-    public var displayName: String {
-        switch self {
-        case .normal: return "Sofia Wind Farm"
-        case .test:   return "Test Mode (HEYM11)"
+            SettingsView(vm: vm)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
         }
     }
 }
 
-// MARK: - API Models
-
-public struct PnResponse: Codable, Identifiable {
-    public var id: String { "\(bmuId)-\(timeFrom)" }
-    public let bmuId: String
-    public let timeFrom: Date
-    public let timeTo: Date
-    public let settlementPeriod: Int
-    public let levelMw: Double
-    public let source: String?
-
-    enum CodingKeys: String, CodingKey {
-        case bmuId = "bmu_id"
-        case timeFrom = "time_from"
-        case timeTo = "time_to"
-        case settlementPeriod = "settlement_period"
-        case levelMw = "level_mw"
-        case source
-    }
-
-    public init(bmuId: String, timeFrom: Date, timeTo: Date, settlementPeriod: Int, levelMw: Double, source: String?) {
-        self.bmuId = bmuId
-        self.timeFrom = timeFrom
-        self.timeTo = timeTo
-        self.settlementPeriod = settlementPeriod
-        self.levelMw = levelMw
-        self.source = source
-    }
-}
-
-public struct PnLatestSettlementPeriod: Codable {
-    public let bmuId: String
-    public let settlementPeriod: Int?
-    public let timeFrom: Date?
-
-    enum CodingKeys: String, CodingKey {
-        case bmuId = "bmu_id"
-        case settlementPeriod = "settlement_period"
-        case timeFrom = "time_from"
-    }
-
-    public init(bmuId: String, settlementPeriod: Int?, timeFrom: Date?) {
-        self.bmuId = bmuId
-        self.settlementPeriod = settlementPeriod
-        self.timeFrom = timeFrom
-    }
-}
-
-public struct PnDateRange: Codable {
-    public let oldest: Date?
-    public let latest: Date?
-
-    public init(oldest: Date?, latest: Date?) {
-        self.oldest = oldest
-        self.latest = latest
-    }
-}
-
-// MARK: - REMIT
-
-public struct RemitResponse: Codable, Identifiable {
-    public let id: Int
-    public let mrid: String
-    public let revisionNumber: Int
-    public let bmuId: String
-    public let participantId: String
-    public let assetId: String
-    public let unavailabilityType: String
-    public let eventType: String
-    public let messageHeading: String
-    public let fuelType: String
-    public let normalCapacityMw: Double?
-    public let availableCapacityMw: Double?
-    public let unavailableCapacityMw: Double?
-    public let eventStatus: String
-    public let eventStartTime: Date?
-    public let eventEndTime: Date?
-    public let cause: String
-    public let relatedInformation: String
-    public let publishTime: Date?
-    public let outageProfile: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case mrid
-        case revisionNumber        = "revision_number"
-        case bmuId                 = "bmu_id"
-        case participantId         = "participant_id"
-        case assetId               = "asset_id"
-        case unavailabilityType    = "unavailability_type"
-        case eventType             = "event_type"
-        case messageHeading        = "message_heading"
-        case fuelType              = "fuel_type"
-        case normalCapacityMw      = "normal_capacity_mw"
-        case availableCapacityMw   = "available_capacity_mw"
-        case unavailableCapacityMw = "unavailable_capacity_mw"
-        case eventStatus           = "event_status"
-        case eventStartTime        = "event_start_time"
-        case eventEndTime          = "event_end_time"
-        case cause
-        case relatedInformation    = "related_information"
-        case publishTime           = "publish_time"
-        case outageProfile         = "outage_profile"
-    }
-
-    /// True when the event window overlaps the current moment.
-    public var isCurrentlyActive: Bool {
-        let now = Date()
-        let start = eventStartTime ?? .distantPast
-        let end   = eventEndTime   ?? .distantFuture
-        return start <= now && now <= end
-    }
-
-    /// Capacity reduction described by this REMIT notice, if both fields are present.
-    public var capacityReductionMw: Double? {
-        guard let normal = normalCapacityMw,
-              let available = availableCapacityMw else { return unavailableCapacityMw }
-        return normal - available
-    }
-}
-
-// MARK: - Aggregated point for the chart
-
-public struct AggregatedPoint: Identifiable {
-    public let id = UUID()
-    public let time: Date
-    public let totalMw: Double
-
-    public init(time: Date, totalMw: Double) {
-        self.time = time
-        self.totalMw = totalMw
-    }
-}
-// MARK: - Top Production (records)
-
-public struct PnTopProductionPoint: Codable {
-    public let maxMw: Double
-    public let maxDate: Date?
-
-    enum CodingKeys: String, CodingKey {
-        case maxMw   = "max_mw"
-        case maxDate = "max_date"
-    }
-
-    public init(maxMw: Double, maxDate: Date?) {
-        self.maxMw   = maxMw
-        self.maxDate = maxDate
-    }
-}
-
-public struct PnTopProductionWindows: Codable {
-    public let allTime:    PnTopProductionPoint
-    public let last7Days:  PnTopProductionPoint
-    public let last30Days: PnTopProductionPoint
-    public let last90Days: PnTopProductionPoint
-
-    enum CodingKeys: String, CodingKey {
-        case allTime    = "all_time"
-        case last7Days  = "last_7_days"
-        case last30Days = "last_30_days"
-        case last90Days = "last_90_days"
-    }
-
-    public init(allTime: PnTopProductionPoint,
-                last7Days: PnTopProductionPoint,
-                last30Days: PnTopProductionPoint,
-                last90Days: PnTopProductionPoint) {
-        self.allTime    = allTime
-        self.last7Days  = last7Days
-        self.last30Days = last30Days
-        self.last90Days = last90Days
-    }
+#Preview {
+    ContentView()
 }

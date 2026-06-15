@@ -23,7 +23,7 @@ struct DefinitionCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(radius: 4)
     }

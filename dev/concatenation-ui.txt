@@ -1,0 +1,3228 @@
+
+===== Fichier: settings/SettingsScreen.kt =====
+
+package com.lemarc.sofia.ui.settings
+
+import android.content.Intent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.data.repository.SofiaProductionRepository
+import kotlin.math.roundToInt
+import androidx.core.net.toUri
+import com.lemarc.sofia.BASE_URL
+import com.lemarc.sofia.SOFIA_BMUS
+import com.lemarc.sofia.SOFIA_MAX_CAPACITY_MW
+import com.lemarc.sofia.TEST_BMU
+import com.lemarc.sofia.ui.components.DefinitionCard
+
+@Composable
+fun SettingsScreen(
+    state: SettingsUiState,
+    modifier: Modifier = Modifier,
+    onToggleTestMode: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 4.dp
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                ListItem(
+                    headlineContent = { Text("Test mode") },
+                    supportingContent = {
+                        Text("Use T_HEYM11 instead of the live Sofia aggregate. This setting is persisted locally.")
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = state.testMode,
+                            onCheckedChange = onToggleTestMode,
+                        )
+                    },
+                )
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                ListItem(
+                    headlineContent = { Text("Open web visualisation") },
+                    supportingContent = { Text("Launch the Sofia HTML report in your default browser.") },
+                    trailingContent = {
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    onClick = {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, "https://sofia.lemarc.fr/visual/pn".toUri()),
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text("https://sofia.lemarc.fr/visual/pn")
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "Info",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    AssistChip(onClick = {}, enabled = false, label = { Text("API: ${BASE_URL}") })
+                    Text(
+                        text = "Normal mode BMUs: ${SOFIA_BMUS.joinToString()}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Test mode BMU: ${TEST_BMU}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Normal max capacity: ${SOFIA_MAX_CAPACITY_MW.roundToInt()} MW",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Test mode capacity: derived from the T_HEYM11 production history in the downloaded dataset.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        item {
+            DefinitionCard(
+                "Production Data",
+                "These data are Physical Notification, they show what the unit expect to produce in the next 30 minutes"
+            )
+        }
+        item {
+            DefinitionCard(
+                "Real Output",
+                "These data are issued from RWE and show the energy (MWh) delivered to the British national network"
+            )
+        }
+    }
+}
+===== Fichier: settings/SettingsViewModel.kt =====
+
+package com.lemarc.sofia.ui.settings
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.data.settings.SettingsRepository
+import com.lemarc.sofia.widget.SofiaWidgetsUpdater
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class SettingsUiState(
+    val testMode: Boolean = false,
+)
+
+class SettingsViewModel(
+    application: Application,
+    private val settingsRepository: SettingsRepository,
+) : AndroidViewModel(application) {
+
+    private val _uiState = MutableStateFlow(SettingsUiState())
+    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.testMode.collect { enabled ->
+
+                _uiState.value = SettingsUiState(
+                    testMode = enabled
+                )
+
+                SofiaWidgetsUpdater.updateAll(
+                    getApplication<Application>().applicationContext
+                )
+            }
+        }
+    }
+
+    fun setTestMode(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setTestMode(enabled)
+        }
+    }
+
+    class Factory(
+        private val application: Application,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModelProvider.Factory {
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SettingsViewModel(
+                application,
+                settingsRepository
+            ) as T
+        }
+    }
+}
+===== Fichier: graph/GraphScreen.kt =====
+
+package com.lemarc.sofia.ui.graph
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.filterPoints
+import com.lemarc.sofia.ui.components.ChartSeries
+import com.lemarc.sofia.ui.components.ErrorBanner
+import com.lemarc.sofia.ui.components.ProductionChartMulti
+import com.lemarc.sofia.ui.components.TitleBanner
+import com.lemarc.sofia.ui.components.WarningBanner
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GraphScreen(
+    state: GraphUiState,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit,
+    onSelectWindow: (TimeWindow) -> Unit,
+    onToggleDataset: (GraphDataset) -> Unit,
+    onDismissError: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+
+    val leftRightSeries = remember(
+        state.selectedDatasets,
+        state.selectedWindow,
+        state.pnPoints,
+        state.b1610PointsMwh,
+        state.weatherPoints,
+    ) {
+        // Build series for each selected dataset
+        val series = state.selectedDatasets.map { ds ->
+            when (ds) {
+                GraphDataset.PN -> ChartSeries(
+                    points = filterPoints(state.pnPoints, state.selectedWindow),
+                    allowNegative = false,
+                    unit = "MW",
+                    label = GraphDataset.PN.label,
+                )
+                GraphDataset.B1610 -> ChartSeries(
+                    points = filterPoints(state.b1610PointsMwh.map { it.copy(quantity = it.quantity * 2) }, state.selectedWindow),
+                    allowNegative = true,
+                    unit = "MW",
+                    label = GraphDataset.B1610.label,
+                )
+                GraphDataset.Weather -> ChartSeries(
+                    points = filterPoints(state.weatherPoints, state.selectedWindow),
+                    allowNegative = false,
+                    unit = "m/s",
+                    label = GraphDataset.Weather.label,
+                )
+            }
+        }
+
+        val byUnit = series.groupBy { it.unit }
+        val mwSeries = byUnit["MW"].orEmpty()
+        val otherUnits = byUnit.filterKeys { it != "MW" }
+
+        if (mwSeries.isNotEmpty() && otherUnits.isNotEmpty()) {
+            // MW left, first other unit (m/s) right; ignore any additional different units for now
+            val rightSeries = otherUnits.values.flatten()
+            mwSeries to rightSeries
+        } else if (otherUnits.isNotEmpty()) {
+            // Only non-MW units selected, put them on left
+            otherUnits.values.flatten() to emptyList()
+        } else {
+            // Only MW or nothing
+            mwSeries to emptyList()
+        }
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when {
+            state.isLoading && state.pnPoints.isEmpty() && state.b1610PointsMwh.isEmpty() && state.weatherPoints.isEmpty() ->
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) { CircularProgressIndicator() }
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item { TitleBanner(title = "Graph") }
+                if (state.testMode) {
+                    item {
+                        WarningBanner(text = "TEST MODE — displaying T_HEYM11 only")
+                    }
+                }
+                if (state.errorMessage != null) {
+                    item {
+                        ErrorBanner(
+                            text = state.errorMessage,
+                            onDismiss = onDismissError,
+                        )
+                    }
+                }
+
+                item {
+                    DatasetSelector(
+                        selected = state.selectedDatasets,
+                        onSelect = onToggleDataset,
+                    )
+                }
+
+                item {
+                    GraphChartCard(
+                        left = leftRightSeries.first,
+                        right = leftRightSeries.second,
+                        selectedWindow = state.selectedWindow,
+                        onSelectWindow = onSelectWindow,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DatasetSelector(
+    selected: Set<GraphDataset>,
+    onSelect: (GraphDataset) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf(GraphDataset.Weather, GraphDataset.PN, GraphDataset.B1610).forEach { option ->
+            FilterChip(
+                selected = option in selected,
+                onClick = { onSelect(option) },
+                label = { Text(option.label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun GraphChartCard(
+    left: List<ChartSeries>,
+    right: List<ChartSeries>,
+    selectedWindow: TimeWindow,
+    onSelectWindow: (TimeWindow) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = "Chart",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TimeWindow.entries.forEach { window ->
+                    FilterChip(
+                        selected = window == selectedWindow,
+                        onClick = { onSelectWindow(window) },
+                        label = { Text(window.label) },
+                    )
+                }
+            }
+            ProductionChartMulti(left = left, right = right, tw = selectedWindow)
+        }
+    }
+}
+
+===== Fichier: graph/GraphViewModel.kt =====
+
+package com.lemarc.sofia.ui.graph
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.repository.SofiaB1610Repository
+import com.lemarc.sofia.data.repository.SofiaProductionRepository
+import com.lemarc.sofia.data.repository.SofiaWeatherRepository
+import com.lemarc.sofia.data.settings.SettingsRepository
+import java.time.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+enum class GraphDataset(val label: String) { Weather("Weather"), PN("PN"), B1610("B1610") }
+
+data class GraphUiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val selectedWindow: TimeWindow = TimeWindow.HOURS_24,
+    val selectedDatasets: Set<GraphDataset> = setOf(GraphDataset.PN),
+    // Raw data
+    val pnPoints: List<GraphPoint> = emptyList(), // MW
+    val b1610PointsMwh: List<GraphPoint> = emptyList(), // MWh per 30min
+    val weatherPoints: List<GraphPoint> = emptyList(), // m/s
+    // Meta
+    val latestDataTimestamp: Instant? = null,
+    val lastFetchTimestamp: Instant? = null,
+    val errorMessage: String? = null,
+    val testMode: Boolean = false,
+)
+
+class GraphViewModel(
+    private val productionRepository: SofiaProductionRepository,
+    private val b1610Repository: SofiaB1610Repository,
+    private val weatherRepository: SofiaWeatherRepository,
+    settingsRepository: SettingsRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(GraphUiState())
+    val uiState: StateFlow<GraphUiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+    private var observeJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.testMode.collect { enabled ->
+                _uiState.update { current -> current.copy(testMode = enabled) }
+                startObserving(enabled)
+                refresh(forceLoading = _uiState.value.pnPoints.isEmpty() && _uiState.value.b1610PointsMwh.isEmpty() && _uiState.value.weatherPoints.isEmpty())
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000.milliseconds)
+                refresh()
+            }
+        }
+    }
+
+    private fun startObserving(testMode: Boolean) {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                productionRepository.observeProduction(testMode),
+                b1610Repository.observeB1610(testMode),
+                weatherRepository.observeWeather()
+            ) { pn, b1610, weather ->
+                Triple(pn, b1610, weather)
+            }.collect { (pn, b1610, weather) ->
+                val latestTs = listOfNotNull(
+                    pn.latestDataTimestamp,
+                    b1610.latestDataTimestamp,
+                    weather.latestDataTimestamp,
+                ).maxOrNull()
+                _uiState.update {
+                    it.copy(
+                        pnPoints = pn.points,
+                        b1610PointsMwh = b1610.points,
+                        weatherPoints = weather.points,
+                        latestDataTimestamp = latestTs,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectWindow(window: TimeWindow) {
+        _uiState.update { it.copy(selectedWindow = window) }
+    }
+
+    fun toggleDataset(dataset: GraphDataset) {
+        _uiState.update { state ->
+            val newSet = state.selectedDatasets.toMutableSet().apply {
+                if (contains(dataset)) remove(dataset) else add(dataset)
+            }
+            // Ensure at least one dataset remains selected
+            val finalSet = if (newSet.isEmpty()) setOf(dataset) else newSet
+            state.copy(selectedDatasets = finalSet)
+        }
+    }
+
+    fun refresh(forceLoading: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasExistingData = _uiState.value.pnPoints.isNotEmpty() ||
+                _uiState.value.b1610PointsMwh.isNotEmpty() ||
+                _uiState.value.weatherPoints.isNotEmpty()
+
+            _uiState.update {
+                it.copy(
+                    isLoading = forceLoading || !hasExistingData,
+                    isRefreshing = hasExistingData,
+                    errorMessage = null,
+                )
+            }
+
+            runCatching {
+                coroutineScope {
+                    val pnRefresh = launch { productionRepository.refreshProduction(_uiState.value.testMode) }
+                    val b1610Refresh = launch { b1610Repository.refreshB1610(_uiState.value.testMode) }
+                    val weatherRefresh = launch { weatherRepository.refreshWeather() }
+                    listOf(pnRefresh, b1610Refresh, weatherRefresh).forEach { it.join() }
+                }
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = throwable.message ?: "Unable to refresh data.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    // Helper: convert B1610 MWh (per 30 min) to MW
+    private fun toMwFromMwh30(points: List<GraphPoint>): List<GraphPoint> =
+        points.map { p -> p.copy(quantity = p.quantity * 2) }
+
+    class Factory(
+        private val productionRepository: SofiaProductionRepository,
+        private val b1610Repository: SofiaB1610Repository,
+        private val weatherRepository: SofiaWeatherRepository,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            GraphViewModel(productionRepository, b1610Repository, weatherRepository, settingsRepository) as T
+    }
+}
+
+===== Fichier: navigation/Routes.kt =====
+
+package com.lemarc.sofia.ui.navigation
+
+import kotlinx.serialization.Serializable
+
+sealed interface Route {
+    @Serializable
+    data object Production : Route
+
+    @Serializable
+    data object Graph : Route
+
+    @Serializable
+    data object Weather : Route
+
+    @Serializable
+    data object Remit : Route
+
+    @Serializable
+    data class RemitDetail(val id: Int) : Route
+
+    @Serializable
+    data object Settings : Route
+}
+
+===== Fichier: b1610/B1610Screen.kt =====
+
+package com.lemarc.sofia.ui.b1610
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.filterPoints
+import com.lemarc.sofia.ui.components.ChartCard
+import com.lemarc.sofia.ui.components.EmptyStateCard
+import com.lemarc.sofia.ui.components.ErrorBanner
+import com.lemarc.sofia.ui.components.InfoCard
+import com.lemarc.sofia.ui.components.ProductionRecordCard
+import com.lemarc.sofia.ui.components.TimestampCard
+import com.lemarc.sofia.ui.components.TitleBanner
+import com.lemarc.sofia.ui.components.WarningBanner
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun B1610Screen(
+    state: B1610UiState,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit,
+    onSelectWindow: (TimeWindow) -> Unit,
+    onDismissError: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val displayedPoints = remember(state.points, state.selectedWindow) {
+        filterPoints(state.points, state.selectedWindow)
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when {
+            state.isLoading && state.points.isEmpty() -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item {
+                    TitleBanner(title = "Real Output (B1610)")
+                }
+                if (state.testMode) {
+                    item {
+                        WarningBanner(text = "TEST MODE — displaying T_HEYM11 only")
+                    }
+                }
+                if (state.errorMessage != null) {
+                    item {
+                        ErrorBanner(
+                            text = state.errorMessage,
+                            onDismiss = onDismissError,
+                        )
+                    }
+                }
+                item {
+                    InfoCard(text = "B1610 data is reported in MWh and is typically delayed by ~4 days.")
+                }
+                if (displayedPoints.isEmpty()) {
+                    item {
+                        EmptyStateCard()
+                    }
+                } else {
+                    item {
+                        ChartCard(
+                            points = displayedPoints,
+                            selectedWindow = state.selectedWindow,
+                            onSelectWindow = onSelectWindow,
+                            allowNegative = true,
+                            unit = "MWh"
+                        )
+                    }
+                }
+                item {
+                    ProductionRecordCard(records = state.topB1610, unit = "MWh")
+                }
+                item {
+                    TimestampCard(
+                        latestDataTimestamp = state.latestDataTimestamp,
+                        lastFetchTimestamp = state.lastFetchTimestamp,
+                    )
+                }
+            }
+        }
+    }
+}
+===== Fichier: b1610/B1610ViewModel.kt =====
+
+package com.lemarc.sofia.ui.b1610
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.model.TopWindows
+import com.lemarc.sofia.data.repository.SofiaB1610Repository
+import com.lemarc.sofia.data.settings.SettingsRepository
+import java.time.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+data class B1610UiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val testMode: Boolean = false,
+    val points: List<GraphPoint> = emptyList(),
+    val selectedWindow: TimeWindow = TimeWindow.HOURS_24,
+    val latestDataTimestamp: Instant? = null,
+    val lastFetchTimestamp: Instant? = null,
+    val topB1610: TopWindows = TopWindows.Empty,
+    val errorMessage: String? = null,
+)
+
+class B1610ViewModel(
+    private val repository: SofiaB1610Repository,
+    settingsRepository: SettingsRepository,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(B1610UiState())
+    val uiState: StateFlow<B1610UiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+    private var observeJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.testMode.collect { enabled ->
+                _uiState.update { current -> current.copy(testMode = enabled) }
+                startObserving(enabled)
+                refresh(forceLoading = _uiState.value.points.isEmpty())
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000.milliseconds)
+                refresh()
+            }
+        }
+    }
+
+    private fun startObserving(testMode: Boolean) {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            repository.observeB1610(testMode).collect { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        points = snapshot.points,
+                        latestDataTimestamp = snapshot.latestDataTimestamp,
+                        topB1610 = snapshot.topB1610,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectWindow(window: TimeWindow) {
+        _uiState.update { it.copy(selectedWindow = window) }
+    }
+
+    fun refresh(forceLoading: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasExistingData = _uiState.value.points.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    isLoading = forceLoading || !hasExistingData,
+                    isRefreshing = hasExistingData,
+                    errorMessage = null,
+                )
+            }
+            runCatching {
+                repository.refreshB1610(_uiState.value.testMode)
+            }.onSuccess {
+                _uiState.update { it.copy(lastFetchTimestamp = Instant.now(), errorMessage = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = throwable.message ?: "Unable to refresh B1610 real output data.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    class Factory(
+        private val repository: SofiaB1610Repository,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return B1610ViewModel(repository, settingsRepository) as T
+        }
+    }
+}
+
+===== Fichier: remit/RemitDetailScreen.kt =====
+
+package com.lemarc.sofia.ui.remit
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.data.model.RemitNotice
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun RemitDetailScreen(
+    notice: RemitNotice,
+    onBack: () -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(notice.bmuId) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Retour",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ── Header ────────────────────────────────────────────────────────
+            Text(
+                text = notice.messageHeading.ifBlank { notice.eventType },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LabeledChip(notice.eventStatus)
+                LabeledChip(notice.eventType)
+                if (notice.unavailabilityType.isNotBlank()) LabeledChip(notice.unavailabilityType)
+                if (notice.fuelType.isNotBlank()) LabeledChip(notice.fuelType)
+            }
+
+            HorizontalDivider()
+
+            // ── Capacités ─────────────────────────────────────────────────────
+            SectionTitle("Capacités")
+            DetailRow("Normale",     notice.normalCapacityMw?.let     { "${it.toInt()} MW" } ?: "—")
+            DetailRow("Disponible",  notice.availableCapacityMw?.let  { "${it.toInt()} MW" } ?: "—")
+            DetailRow("Indisponible",notice.unavailableCapacityMw?.let { "${it.toInt()} MW" } ?: "—")
+
+            HorizontalDivider()
+
+            // ── Dates ─────────────────────────────────────────────────────────
+            SectionTitle("Dates")
+            DetailRow("Début",   formatTimestamp(notice.eventStartTime))
+            DetailRow("Fin",     formatTimestamp(notice.eventEndTime))
+            DetailRow("Publié",  formatTimestamp(notice.publishTime))
+
+            HorizontalDivider()
+
+            // ── Actif ─────────────────────────────────────────────────────────
+            SectionTitle("Actif")
+            DetailRow("BMU",         notice.bmuId)
+            DetailRow("Participant", notice.participantId)
+            DetailRow("Asset",       notice.assetId)
+            DetailRow("Révision",    notice.revisionNumber.toString())
+            DetailRow("MRID",        notice.mrid)
+
+            // ── Cause ─────────────────────────────────────────────────────────
+            if (notice.cause.isNotBlank()) {
+                HorizontalDivider()
+                SectionTitle("Cause")
+                Text(
+                    text = notice.cause,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // ── Informations complémentaires ──────────────────────────────────
+            if (notice.relatedInformation.isNotBlank()) {
+                HorizontalDivider()
+                SectionTitle("Informations complémentaires")
+                Text(
+                    text = notice.relatedInformation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // ── Profil d'indisponibilité ──────────────────────────────────────
+            if (notice.outageProfile.isNotBlank()) {
+                HorizontalDivider()
+                SectionTitle("Profil d'indisponibilité")
+                Text(
+                    text = notice.outageProfile,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.45f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(0.55f),
+        )
+    }
+}
+
+@Composable
+private fun LabeledChip(text: String) {
+    SuggestionChip(
+        onClick = {},
+        label = { Text(text = text, style = MaterialTheme.typography.labelSmall) },
+    )
+}
+===== Fichier: remit/RemitScreen.kt =====
+
+package com.lemarc.sofia.ui.remit
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.data.model.RemitNotice
+import com.lemarc.sofia.ui.components.InfoCard
+import com.lemarc.sofia.ui.components.RemitErrorBanner
+import com.lemarc.sofia.ui.components.RemitNoticeCard
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+private val remitTimestampFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'")
+        .withZone(ZoneOffset.UTC)
+
+fun formatTimestamp(timestamp: Instant?): String =
+    timestamp?.let(remitTimestampFormatter::format) ?: "—"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RemitScreen(
+    state: RemitUiState,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit,
+    onDismissError: () -> Unit,
+    onNavigateToDetail: (Int) -> Unit,
+) {
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when {
+            state.isLoading && state.remits.isEmpty() -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (state.errorMessage != null) {
+                    item {
+                        RemitErrorBanner(
+                            text = state.errorMessage,
+                            onDismiss = onDismissError,
+                        )
+                    }
+                }
+                if (state.testMode) {
+                    item {
+                        InfoCard("TEST MODE — T_HEYM11 uniquement.")
+                    }
+                }
+                item {
+                    Text(
+                        text = "REMIT Notices",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                item {
+                    InfoCard("${state.remits.size} avis actif(s)")
+                }
+                if (state.remits.isEmpty()) {
+                    item {
+                        InfoCard("Aucun avis REMIT actif.")
+                    }
+                } else {
+                    items(
+                        count = state.remits.size,
+                        key = { index -> state.remits[index].id },
+                    ) { index ->
+                        RemitNoticeCard(
+                            notice = state.remits[index],
+                            onClick = { onNavigateToDetail(state.remits[index].id) },
+                        )
+                    }
+                }
+                item {
+                    InfoCard("Mis à jour : ${formatTimestamp(state.lastFetchTimestamp)}")
+                }
+            }
+        }
+    }
+}
+===== Fichier: remit/RemitViewModel.kt =====
+
+package com.lemarc.sofia.ui.remit
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.data.model.RemitNotice
+import com.lemarc.sofia.data.repository.SofiaRemitRepository
+import com.lemarc.sofia.data.settings.SettingsRepository
+import java.time.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+data class RemitUiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val testMode: Boolean = false,
+    val remits: List<RemitNotice> = emptyList(),
+    val lastFetchTimestamp: Instant? = null,
+    val errorMessage: String? = null,
+)
+
+class RemitViewModel(
+    private val repository: SofiaRemitRepository,
+    settingsRepository: SettingsRepository,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(RemitUiState())
+    val uiState: StateFlow<RemitUiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+    private var observeJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.testMode.collect { enabled ->
+                _uiState.update { current -> current.copy(testMode = enabled) }
+                startObserving(enabled)
+                refresh(forceLoading = _uiState.value.remits.isEmpty())
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(120_000.milliseconds)
+                refresh()
+            }
+        }
+    }
+
+    private fun startObserving(testMode: Boolean) {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            repository.observeRemits(testMode).collect { remits ->
+                _uiState.update {
+                    it.copy(
+                        remits = remits,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun refresh(forceLoading: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasExistingData = _uiState.value.remits.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    isLoading = forceLoading || !hasExistingData,
+                    isRefreshing = hasExistingData,
+                    errorMessage = null,
+                )
+            }
+            runCatching {
+                repository.refreshRemits(_uiState.value.testMode)
+            }.onSuccess {
+                _uiState.update { it.copy(lastFetchTimestamp = Instant.now(), errorMessage = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = throwable.message ?: "Unable to refresh REMIT data.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    class Factory(
+        private val repository: SofiaRemitRepository,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return RemitViewModel(repository, settingsRepository) as T
+        }
+    }
+}
+
+===== Fichier: components/ProductionChart.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.AxisBase
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.ui.shortAxisFormatter
+import kotlin.math.max
+import kotlin.math.roundToInt
+
+
+@Composable
+fun ProductionChart(points: List<GraphPoint>, allowNegative: Boolean, unit: String, tw: TimeWindow) {
+
+    val axisColor = MaterialTheme.colorScheme.onSurface.toArgb()
+
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp),
+        factory = { context ->
+            LineChart(context).apply {
+                description.isEnabled = false
+                legend.isEnabled = false
+
+                setTouchEnabled(true)
+                isDragEnabled = true
+                setScaleEnabled(true)
+                setPinchZoom(true)
+
+                setNoDataText("No production data available")
+
+                axisRight.isEnabled = false
+
+                axisLeft.apply {
+                    axisMinimum = if (allowNegative) {
+                        points.minOf { it.quantity }.toFloat()
+                    } else {
+                        0f
+                    }
+                    textColor = axisColor
+                }
+
+                xAxis.apply {
+                    position = XAxis.XAxisPosition.BOTTOM
+                    granularity = 1f
+                    labelRotationAngle = -30f
+
+                    textColor = axisColor
+                }
+
+                setViewPortOffsets(70f, 20f, 28f, 90f)
+            }
+        },
+        update = { chart ->
+            val entries = points.mapIndexed { index, point ->
+                Entry(index.toFloat(), point.quantity.toFloat())
+            }
+
+            val dataSet = LineDataSet(entries, "Production").apply {
+                color = android.graphics.Color.rgb(30, 136, 229)
+                lineWidth = 2.5f
+                setDrawCircles(false)
+                setDrawValues(false)
+                setDrawFilled(true)
+                fillColor = android.graphics.Color.rgb(77, 208, 225)
+                fillAlpha = 48
+                mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+            }
+
+            chart.data = LineData(dataSet)
+
+            chart.axisLeft.axisMaximum =
+                (max(points.maxOfOrNull { it.quantity } ?: 0.0, 10.0) * 1.15).toFloat()
+
+            chart.xAxis.valueFormatter = object : ValueFormatter() {
+                override fun getAxisLabel(
+                    value: Float,
+                    axis: AxisBase?,
+                ): String {
+                    val index = value.roundToInt().coerceIn(points.indices)
+                    return shortAxisFormatter(tw).format(points[index].timeFrom)
+                }
+            }
+            chart.axisLeft.apply {
+                axisMinimum = if (allowNegative) {
+                    points.minOf { it.quantity }.toFloat()
+                } else {
+                    0f
+                }
+                textColor = axisColor
+            }
+            chart.axisLeft.valueFormatter = object : ValueFormatter() {
+                override fun getAxisLabel(
+                    value: Float,
+                    axis: AxisBase?
+                ): String {
+                    return if (value % 1f == 0f) {
+                        "${value.toInt()} $unit"
+                    } else {
+                        "$value $unit"
+                    }
+                }
+            }
+            chart.invalidate()
+        },
+    )
+}
+===== Fichier: components/TitleBanner.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun TitleBanner(title: String = "Sofia Live Generation") {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            /*
+            Image(
+                painter = painterResource(id = com.lemarc.sofia.R.drawable.logo_sofia_rwe,),
+                contentDescription = "Logo",
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+            )
+            */
+        }
+    }
+}
+===== Fichier: components/ProductionGaugeCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.ui.theme.SofiaBlue
+import com.lemarc.sofia.ui.theme.SofiaCyan
+import com.lemarc.sofia.ui.theme.SofiaIndigo
+import kotlin.math.roundToInt
+
+@Composable
+fun ProductionGaugeCard(
+    currentMw: Double,
+    maxCapacityMw: Double,
+) {
+    val safeMaxCapacity = maxCapacityMw.coerceAtLeast(1.0)
+    val progress = (currentMw / safeMaxCapacity).toFloat().coerceIn(0f, 1f)
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = progress,
+        label = "productionGaugeProgress",
+    )
+    val animatedMw by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = currentMw.toFloat(),
+        label = "productionGaugeValue",
+    )
+    val color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.size(240.dp)) {
+                val stroke = 24.dp.toPx()
+                val diameter = size.minDimension - stroke
+                val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+                drawArc(
+                    color = color,
+                    startAngle = 135f,
+                    sweepAngle = 270f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = androidx.compose.ui.geometry.Size(diameter, diameter),
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                )
+                drawArc(
+                    brush = Brush.sweepGradient(
+                        colors = listOf(SofiaCyan, SofiaBlue, SofiaIndigo, SofiaCyan),
+                    ),
+                    startAngle = 135f,
+                    sweepAngle = 270f * animatedProgress,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = androidx.compose.ui.geometry.Size(diameter, diameter),
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "${animatedMw.roundToInt()} MW",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${(animatedProgress * 100).roundToInt()}% of ${safeMaxCapacity.roundToInt()} MW",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+===== Fichier: components/EmptyStateCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun EmptyStateCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(text = "🌬️", fontSize = 48.sp)
+            Text(
+                text = "No production data available yet.",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "Pull to refresh and try again once the API returns data.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+===== Fichier: components/DefinitionCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun DefinitionCard(title: String, text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        ),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        ListItem(
+            headlineContent = { Text(title) },
+            supportingContent = {
+                Text(text)
+            }
+        )
+    }
+}
+===== Fichier: components/ProductionRecordCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.data.model.TopPoint
+import com.lemarc.sofia.data.model.TopWindows
+import com.lemarc.sofia.ui.timestampFormatter
+import kotlin.math.roundToInt
+
+@Composable
+fun ProductionRecordCard(records: TopWindows, unit: String = "MW") {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "Production records",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            RecordRow(label = "All-time", point = records.allTime, unit = unit)
+            RecordRow(label = "Last 7 days", point = records.last7Days, unit = unit)
+            RecordRow(label = "Last 30 days", point = records.last30Days, unit = unit)
+            RecordRow(label = "Last 90 days", point = records.last90Days, unit = unit)
+        }
+    }
+}
+
+@Composable
+private fun RecordRow(
+    label: String,
+    point: TopPoint,
+    unit: String = "MW",
+) {
+    val dateValue = point.maxDate?.let(timestampFormatter::format) ?: "—"
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = "${point.maxQuantity} $unit • $dateValue",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+===== Fichier: components/TimestampRow.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.lemarc.sofia.ui.timestampFormatter
+import java.time.Instant
+
+@Composable
+fun TimestampRow(label: String, value: Instant?) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = value?.let(timestampFormatter::format) ?: "—",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.End,
+        )
+    }
+}
+===== Fichier: components/ErrorBanner.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.ui.theme.SofiaErrorContainer
+
+@Composable
+fun ErrorBanner(
+    text: String,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SofiaErrorContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp),
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Medium,
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss error",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+===== Fichier: components/RemitErrorBanner.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.ui.theme.SofiaErrorContainer
+
+@Composable
+fun RemitErrorBanner(
+    text: String,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SofiaErrorContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp),
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Medium,
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss error",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+===== Fichier: components/WarningBanner.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.ui.theme.SofiaYellow
+import com.lemarc.sofia.ui.theme.SofiaYellowText
+
+
+@Composable
+fun WarningBanner(text: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SofiaYellow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(16.dp),
+            color = SofiaYellowText,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+===== Fichier: components/TimestampCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import java.time.Instant
+
+@Composable
+fun TimestampCard(
+    latestDataTimestamp: Instant?,
+    lastFetchTimestamp: Instant?,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Timestamps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            TimestampRow(label = "Latest API data", value = latestDataTimestamp)
+            HorizontalDivider()
+            TimestampRow(label = "Last refresh", value = lastFetchTimestamp)
+        }
+    }
+}
+===== Fichier: components/Capacity Text.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import kotlin.math.roundToInt
+
+@Composable
+fun CapacityText(label: String, valueMw: Double?) {
+    Text(
+        text = "$label: ${valueMw?.roundToInt()?.toString() ?: "—"} MW",
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+===== Fichier: components/ProductionChartMulti.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.AxisBase
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.ui.shortAxisFormatter
+import kotlin.math.roundToInt
+
+data class ChartSeries(
+    val points: List<GraphPoint>,
+    val allowNegative: Boolean,
+    val unit: String,
+    val label: String = "",
+)
+
+@Composable
+fun ProductionChartMulti(
+    left: List<ChartSeries>,
+    right: List<ChartSeries> = emptyList(),
+    tw: TimeWindow
+) {
+    val axisColor = MaterialTheme.colorScheme.onSurface.toArgb()
+
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp),
+        factory = { context ->
+            LineChart(context).apply {
+                description.isEnabled = false
+                legend.isEnabled = true
+
+                setTouchEnabled(true)
+                isDragEnabled = true
+                setScaleEnabled(true)
+                setPinchZoom(true)
+
+                setNoDataText("No data available")
+
+                axisRight.isEnabled = right.isNotEmpty()
+
+                axisLeft.apply {
+                    textColor = axisColor
+                }
+                xAxis.apply {
+                    position = XAxis.XAxisPosition.BOTTOM
+                    granularity = 1f
+                    labelRotationAngle = -30f
+                    textColor = axisColor
+                }
+                setViewPortOffsets(70f, 20f, 48f, 90f)
+            }
+        },
+        update = { chart ->
+            val dataSets = mutableListOf<LineDataSet>()
+
+            fun colorForLabel(label: String, index: Int): Int {
+                return when (label) {
+                    "PN" -> android.graphics.Color.rgb(30, 136, 229) // blue
+                    "B1610" -> android.graphics.Color.rgb(255, 152, 0) // amber
+                    "Weather" -> android.graphics.Color.rgb(76, 175, 80) // green
+                    else -> {
+                        // fallback palette
+                        val palette = listOf(
+                            android.graphics.Color.rgb(3, 169, 244), // light blue
+                            android.graphics.Color.rgb(0, 150, 136), // teal
+                            android.graphics.Color.rgb(244, 67, 54), // red
+                            android.graphics.Color.rgb(156, 39, 176), // purple
+                            android.graphics.Color.rgb(63, 81, 181), // indigo
+                        )
+                        palette[index % palette.size]
+                    }
+                }
+            }
+
+            // LEFT AXIS SERIES
+            if (left.isNotEmpty()) {
+                left.forEachIndexed { idx, series ->
+                    val entries = series.points.mapIndexed { index, point ->
+                        Entry(index.toFloat(), point.quantity.toFloat())
+                    }
+                    val ds = LineDataSet(entries, series.label.ifEmpty { "Series L${idx + 1}" }).apply {
+                        color = colorForLabel(series.label, idx)
+                        lineWidth = 2.2f
+                        setDrawCircles(false)
+                        setDrawValues(false)
+                        setDrawFilled(idx == 0) // fill only first to reduce clutter
+                        fillColor = android.graphics.Color.argb(64, 33, 150, 243)
+                        fillAlpha = 48
+                        mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+                        axisDependency = YAxis.AxisDependency.LEFT
+                    }
+                    dataSets += ds
+                }
+
+                val allPoints = left.flatMap { it.points }
+                chart.axisLeft.apply {
+                    axisMinimum = if (allPoints.isNotEmpty()) {
+                        minOf(0f, allPoints.minOf { it.quantity }.toFloat()) -2f
+                    } else {
+                        0f
+                    }
+                    textColor = axisColor
+                }
+                val leftUnit = left.first().unit
+                chart.axisLeft.valueFormatter = object : ValueFormatter() {
+                    override fun getAxisLabel(value: Float, axis: AxisBase?): String =
+                        if (value % 1f == 0f) "${value.toInt()} $leftUnit" else "$value $leftUnit"
+                }
+            }
+
+            // RIGHT AXIS SERIES
+            if (right.isNotEmpty()) {
+                chart.axisRight.isEnabled = true
+                right.forEachIndexed { idx, series ->
+                    val entries = series.points.mapIndexed { index, point ->
+                        Entry(index.toFloat(), point.quantity.toFloat())
+                    }
+                    val ds = LineDataSet(entries, series.label.ifEmpty { "Series R${idx + 1}" }).apply {
+                        color = colorForLabel(series.label, idx)
+                        lineWidth = 2.2f
+                        setDrawCircles(false)
+                        setDrawValues(false)
+                        setDrawFilled(false)
+                        mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+                        axisDependency = YAxis.AxisDependency.RIGHT
+                    }
+                    dataSets += ds
+                }
+
+                val allPoints = right.flatMap { it.points }
+                chart.axisRight.apply {
+                    isEnabled = true
+                    axisMinimum = if (allPoints.isNotEmpty()) {
+                        minOf(0f, allPoints.minOf { it.quantity }.toFloat()) - 2f
+                    } else {
+                        0f
+                    }
+                    textColor = axisColor
+                }
+                val rightUnit = right.first().unit
+                chart.axisRight.valueFormatter = object : ValueFormatter() {
+                    override fun getAxisLabel(value: Float, axis: AxisBase?): String =
+                        if (value % 1f == 0f) "${value.toInt()} $rightUnit" else "$value $rightUnit"
+                }
+            } else {
+                chart.axisRight.isEnabled = false
+            }
+
+            chart.data = LineData(dataSets as List<LineDataSet>)
+
+            val referencePoints = when {
+                left.isNotEmpty() -> left.first().points
+                right.isNotEmpty() -> right.first().points
+                else -> emptyList()
+            }
+            chart.xAxis.valueFormatter = object : ValueFormatter() {
+                override fun getAxisLabel(value: Float, axis: AxisBase?): String {
+                    val index = value.roundToInt().coerceIn(referencePoints.indices)
+                    return if (referencePoints.isNotEmpty()) shortAxisFormatter(tw).format(referencePoints[index].timeFrom) else ""
+                }
+            }
+            chart.invalidate()
+        },
+    )
+}
+
+===== Fichier: components/ChartCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+
+@Composable
+fun ChartCard(
+    points: List<GraphPoint>,
+    selectedWindow: TimeWindow,
+    onSelectWindow: (TimeWindow) -> Unit,
+    allowNegative: Boolean = false,
+    unit: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = "Production history",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TimeWindow.entries.forEach { window ->
+                    FilterChip(
+                        selected = window == selectedWindow,
+                        onClick = { onSelectWindow(window) },
+                        label = { Text(window.label) },
+                    )
+                }
+            }
+            ProductionChart(points = points, allowNegative = allowNegative, unit = unit, tw = selectedWindow)
+        }
+    }
+}
+===== Fichier: components/RemitNoticeCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.data.model.RemitNotice
+import com.lemarc.sofia.ui.remit.formatTimestamp
+
+@Composable
+fun RemitNoticeCard(
+    notice: RemitNotice,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        onClick = onClick,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "${notice.bmuId} · ${notice.eventStatus}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = notice.messageHeading.ifBlank { notice.eventType },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (notice.cause.isNotBlank()) {
+                Text(
+                    text = "Cause: ${notice.cause}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            HorizontalDivider()
+            CapacityText("Unavailable", notice.unavailableCapacityMw)
+            CapacityText("Available", notice.availableCapacityMw)
+            CapacityText("Normal", notice.normalCapacityMw)
+            Text(
+                text = "Published: ${formatTimestamp(notice.publishTime)}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "End: ${formatTimestamp(notice.eventEndTime)}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+===== Fichier: components/InfoCard.kt =====
+
+package com.lemarc.sofia.ui.components
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun InfoCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+===== Fichier: theme/Color.kt =====
+
+package com.lemarc.sofia.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val SofiaCyan = Color(0xFF4DD0E1)
+val SofiaBlue = Color(0xFF1E88E5)
+val SofiaIndigo = Color(0xFF3949AB)
+val SofiaSurfaceLight = Color(0xFFF3F7FF)
+val SofiaSurfaceDark = Color(0xFF121826)
+val SofiaYellow = Color(0xFFFFF3CD)
+val SofiaYellowText = Color(0xFF6A4F00)
+val SofiaErrorContainer = Color(0xFFFFDAD6)
+
+===== Fichier: theme/Theme.kt =====
+
+package com.lemarc.sofia.ui.theme
+
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+
+private val DarkColorScheme = darkColorScheme(
+    primary = SofiaBlue,
+    secondary = SofiaCyan,
+    tertiary = SofiaIndigo,
+
+    background = Color(0xFF0F1724),
+    surface = Color(0xFF182233),
+
+    surfaceContainer = Color(0xFF1D2A3D),
+    surfaceContainerLow = Color(0xFF172131),
+    surfaceContainerHigh = Color(0xFF243248),
+
+    surfaceVariant = Color(0xFF2C3B52),
+
+    outline = Color(0xFF3A4A63),
+)
+
+private val LightColorScheme = lightColorScheme(
+    primary = SofiaBlue,
+    secondary = SofiaCyan,
+    tertiary = SofiaIndigo,
+
+    background = Color(0xFFF5F7FA),
+    surface = Color.White,
+
+    surfaceContainer = Color(0xFFF0F4FA),
+    surfaceContainerLow = Color(0xFFF7F9FC),
+    surfaceContainerHigh = Color(0xFFE7EDF7),
+
+    surfaceVariant = Color(0xFFE3E8F2),
+
+    outline = Color(0xFFD0D7E2),
+)
+
+@Composable
+fun Sofia_AndroidTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.surface.toArgb()
+            window.navigationBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content,
+    )
+}
+
+===== Fichier: theme/Type.kt =====
+
+package com.lemarc.sofia.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+// Set of Material typography styles to start with
+val Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    )
+    /* Other default text styles to override
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+    */
+)
+===== Fichier: SofiaApp.kt =====
+
+package com.lemarc.sofia.ui
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.ui.navigation.Route
+import com.lemarc.sofia.ui.b1610.B1610Screen
+import com.lemarc.sofia.ui.b1610.B1610ViewModel
+import com.lemarc.sofia.ui.production.ProductionScreen
+import com.lemarc.sofia.ui.production.ProductionCombinedScreen
+import com.lemarc.sofia.ui.production.ProductionViewModel
+import com.lemarc.sofia.ui.graph.GraphScreen
+import com.lemarc.sofia.ui.graph.GraphViewModel
+import com.lemarc.sofia.ui.remit.RemitDetailScreen
+import com.lemarc.sofia.ui.remit.RemitScreen
+import com.lemarc.sofia.ui.remit.RemitViewModel
+import com.lemarc.sofia.ui.settings.SettingsScreen
+import com.lemarc.sofia.ui.settings.SettingsViewModel
+import com.lemarc.sofia.ui.weather.WeatherScreen
+import com.lemarc.sofia.ui.weather.WeatherViewModel
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+private enum class AppTab(val label: String) {
+    Production("Production"),
+    Graph("Graph"),
+    Weather("Weather"),
+    Remit("REMIT"),
+    Settings("Settings"),
+}
+
+val timestampFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'")
+        .withZone(ZoneOffset.UTC)
+fun shortAxisFormatter(tw: TimeWindow): DateTimeFormatter {
+    val pattern = when (tw) {
+        TimeWindow.HOURS_6  -> "HH:mm"
+        TimeWindow.HOURS_24 -> "MM-dd HH:mm"
+        TimeWindow.HOURS_48 -> "MM-dd HH:mm"
+        TimeWindow.DAYS_7   -> "MM-dd"
+        TimeWindow.ALL      -> "MM-dd"
+    }
+
+    return DateTimeFormatter.ofPattern(pattern)
+        .withZone(ZoneOffset.UTC)
+}
+@Composable
+fun SofiaApp(
+    productionViewModel: ProductionViewModel,
+    b1610ViewModel: B1610ViewModel,
+    graphViewModel: GraphViewModel,
+    remitViewModel: RemitViewModel,
+    settingsViewModel: SettingsViewModel,
+    weatherViewModel: WeatherViewModel,
+) {
+    val productionState by productionViewModel.uiState.collectAsStateWithLifecycle()
+    val b1610State by b1610ViewModel.uiState.collectAsStateWithLifecycle()
+    val graphState by graphViewModel.uiState.collectAsStateWithLifecycle()
+    val remitState by remitViewModel.uiState.collectAsStateWithLifecycle()
+    val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
+
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    val tabs = listOf(
+        AppTab.Production to Route.Production,
+        AppTab.Graph to Route.Graph,
+        AppTab.Remit to Route.Remit,
+        AppTab.Weather to Route.Weather,
+        AppTab.Settings to Route.Settings,
+    )
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                tabs.forEach { (tab, route) ->
+                    val isSelected = currentDestination?.hierarchy?.any { it.hasRoute(route::class) } == true
+                    NavigationBarItem(
+                        selected = isSelected,
+                        onClick = {
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            val icon = when (tab) {
+                                AppTab.Production -> Icons.Filled.Bolt
+                                AppTab.Graph -> Icons.AutoMirrored.Filled.ShowChart
+                                AppTab.Remit -> Icons.Filled.Warning
+                                AppTab.Weather -> Icons.Filled.Air
+                                AppTab.Settings -> Icons.Filled.Settings
+                            }
+                            Icon(icon, contentDescription = null)
+                        },
+                        label = { Text(tab.label) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Route.Production,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable<Route.Production> {
+                ProductionCombinedScreen(
+                    productionState = productionState,
+                    b1610State = b1610State,
+                    onRefreshProduction = { productionViewModel.refresh() },
+                    onSelectWindowProduction = productionViewModel::selectWindow,
+                    onDismissErrorProduction = productionViewModel::dismissError,
+                    onRefreshB1610 = { b1610ViewModel.refresh() },
+                    onSelectWindowB1610 = b1610ViewModel::selectWindow,
+                    onDismissErrorB1610 = b1610ViewModel::dismissError,
+                )
+            }
+            composable<Route.Graph> {
+                GraphScreen(
+                    state = graphState,
+                    onRefresh = graphViewModel::refresh,
+                    onSelectWindow = graphViewModel::selectWindow,
+                    onToggleDataset = graphViewModel::toggleDataset,
+                    onDismissError = graphViewModel::dismissError,
+                )
+            }
+            composable<Route.Weather> {
+                WeatherScreen(
+                    state = weatherState,
+                    onRefresh = weatherViewModel::refresh,
+                    onSelectWindow = weatherViewModel::selectWindow,
+                    onDismissError = weatherViewModel::dismissError,
+                )
+            }
+            composable<Route.Remit> {
+                RemitScreen(
+                    state = remitState,
+                    onRefresh = remitViewModel::refresh,
+                    onDismissError = remitViewModel::dismissError,
+                    onNavigateToDetail = { id -> navController.navigate(Route.RemitDetail(id)) }
+                )
+            }
+            composable<Route.RemitDetail> { backStackEntry ->
+                val route: Route.RemitDetail = backStackEntry.toRoute()
+                val notice = remitState.remits.firstOrNull { it.id == route.id }
+                if (notice != null) {
+                    RemitDetailScreen(
+                        notice = notice,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable<Route.Settings> {
+                SettingsScreen(
+                    state = settingsState,
+                    onToggleTestMode = settingsViewModel::setTestMode,
+                )
+            }
+        }
+    }
+}
+
+===== Fichier: production/ProductionViewModel.kt =====
+
+package com.lemarc.sofia.ui.production
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.SOFIA_MAX_CAPACITY_MW
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.model.TopWindows
+import com.lemarc.sofia.data.repository.SofiaProductionRepository
+import com.lemarc.sofia.data.settings.SettingsRepository
+import java.time.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+data class ProductionUiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val testMode: Boolean = false,
+    val points: List<GraphPoint> = emptyList(),
+    val currentMw: Double = 0.0,
+    val maxCapacityMw: Double = SOFIA_MAX_CAPACITY_MW,
+    val selectedWindow: TimeWindow = TimeWindow.HOURS_24,
+    val latestDataTimestamp: Instant? = null,
+    val lastFetchTimestamp: Instant? = null,
+    val topProduction: TopWindows = TopWindows.Empty,
+    val errorMessage: String? = null,
+)
+
+class ProductionViewModel(
+    private val repository: SofiaProductionRepository,
+    settingsRepository: SettingsRepository,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(ProductionUiState())
+    val uiState: StateFlow<ProductionUiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+    private var observeJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.testMode.collect { enabled ->
+                _uiState.update { current -> current.copy(testMode = enabled) }
+                startObserving(enabled)
+                refresh(forceLoading = _uiState.value.points.isEmpty())
+            }
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000.milliseconds)
+                refresh()
+            }
+        }
+    }
+
+    private fun startObserving(testMode: Boolean) {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            repository.observeProduction(testMode).collect { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        points = snapshot.points,
+                        currentMw = snapshot.currentMw,
+                        latestDataTimestamp = snapshot.latestDataTimestamp,
+                        topProduction = snapshot.topProduction,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectWindow(window: TimeWindow) {
+        _uiState.update { it.copy(selectedWindow = window) }
+    }
+
+    fun refresh(forceLoading: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasExistingData = _uiState.value.points.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    isLoading = forceLoading || !hasExistingData,
+                    isRefreshing = hasExistingData,
+                    errorMessage = null,
+                )
+            }
+            runCatching {
+                repository.refreshProduction(_uiState.value.testMode)
+            }.onSuccess {
+                _uiState.update { it.copy(lastFetchTimestamp = Instant.now(), errorMessage = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = throwable.message ?: "Unable to refresh Sofia production data.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    class Factory(
+        private val repository: SofiaProductionRepository,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return ProductionViewModel(repository, settingsRepository) as T
+        }
+    }
+}
+
+===== Fichier: production/ProductionScreen.kt =====
+
+package com.lemarc.sofia.ui.production
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.filterPoints
+import com.lemarc.sofia.ui.components.ChartCard
+import com.lemarc.sofia.ui.components.EmptyStateCard
+import com.lemarc.sofia.ui.components.ErrorBanner
+import com.lemarc.sofia.ui.components.ProductionGaugeCard
+import com.lemarc.sofia.ui.components.ProductionRecordCard
+import com.lemarc.sofia.ui.components.TimestampCard
+import com.lemarc.sofia.ui.components.TitleBanner
+import com.lemarc.sofia.ui.components.WarningBanner
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProductionScreen(
+    state: ProductionUiState,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit,
+    onSelectWindow: (TimeWindow) -> Unit,
+    onDismissError: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val displayedPoints = remember(state.points, state.selectedWindow) {
+        filterPoints(state.points, state.selectedWindow)
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when {
+            state.isLoading && state.points.isEmpty() -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item {
+                    TitleBanner()
+                }
+                if (state.testMode) {
+                    item {
+                        WarningBanner(text = "TEST MODE — displaying T_HEYM11 only")
+                    }
+                }
+                if (state.errorMessage != null) {
+                    item {
+                        ErrorBanner(
+                            text = state.errorMessage,
+                            onDismiss = onDismissError,
+                        )
+                    }
+                }
+                item {
+                    ProductionGaugeCard(
+                        currentMw = state.currentMw,
+                        maxCapacityMw = state.maxCapacityMw,
+                    )
+                }
+                if (displayedPoints.isEmpty()) {
+                    item {
+                        EmptyStateCard()
+                    }
+                } else {
+                    item {
+                        ChartCard(
+                            points = displayedPoints,
+                            selectedWindow = state.selectedWindow,
+                            onSelectWindow = onSelectWindow,
+                            unit = "MW"
+                        )
+                    }
+                }
+                item {
+                    ProductionRecordCard(records = state.topProduction)
+                }
+                item {
+                    TimestampCard(
+                        latestDataTimestamp = state.latestDataTimestamp,
+                        lastFetchTimestamp = state.lastFetchTimestamp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+===== Fichier: production/ProductionCombinedScreen.kt =====
+
+package com.lemarc.sofia.ui.production
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.ui.b1610.B1610Screen
+import com.lemarc.sofia.ui.b1610.B1610UiState
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ProductionCombinedScreen(
+    productionState: ProductionUiState,
+    b1610State: B1610UiState,
+    modifier: Modifier = Modifier,
+    onRefreshProduction: () -> Unit,
+    onSelectWindowProduction: (TimeWindow) -> Unit,
+    onDismissErrorProduction: () -> Unit,
+    onRefreshB1610: () -> Unit,
+    onSelectWindowB1610: (TimeWindow) -> Unit,
+    onDismissErrorB1610: () -> Unit,
+) {
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+
+    Box(modifier = modifier.fillMaxSize()) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            when (page) {
+                0 -> ProductionScreen(
+                    state = productionState,
+                    onRefresh = onRefreshProduction,
+                    onSelectWindow = onSelectWindowProduction,
+                    onDismissError = onDismissErrorProduction,
+                )
+                else -> B1610Screen(
+                    state = b1610State,
+                    onRefresh = onRefreshB1610,
+                    onSelectWindow = onSelectWindowB1610,
+                    onDismissError = onDismissErrorB1610,
+                )
+            }
+        }
+
+        // Floating slider to indicate pager tabs just above the NavigationBar
+        FloatingPagerSlider(
+            pagerState = pagerState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp)
+        )
+    }
+}
+
+@Composable
+private fun FloatingPagerSlider(
+    pagerState: PagerState,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+
+    val containerShape = RoundedCornerShape(24.dp)
+    val segmentWidth: Dp = 120.dp
+    val segmentHeight: Dp = 36.dp
+
+    Surface(
+        modifier = modifier,
+        shape = containerShape,
+        shadowElevation = 6.dp,
+        tonalElevation = 6.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(segmentWidth * 2)
+                .height(segmentHeight)
+        ) {
+            // Sliding indicator
+            val indicatorColor = MaterialTheme.colorScheme.primaryContainer
+            Box(
+                modifier = Modifier
+                    .offset(x = if (pagerState.currentPage == 0) 0.dp else segmentWidth)
+                    .width(segmentWidth)
+                    .height(segmentHeight)
+                    .clip(containerShape)
+                    .background(indicatorColor)
+            )
+
+            // Clickable segments + labels
+            Row(modifier = Modifier.matchParentSize()) {
+                Segment(
+                    text = "Production",
+                    selected = pagerState.currentPage == 0,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                    width = segmentWidth,
+                    height = segmentHeight,
+                )
+                Segment(
+                    text = "Real Output",
+                    selected = pagerState.currentPage == 1,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                    width = segmentWidth,
+                    height = segmentHeight,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Segment(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    width: Dp,
+    height: Dp,
+) {
+    val txtColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = text, color = txtColor, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+===== Fichier: weather/WeatherViewModel.kt =====
+
+package com.lemarc.sofia.ui.weather
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.model.GraphPoint
+import com.lemarc.sofia.data.repository.SofiaProductionRepository
+import com.lemarc.sofia.data.repository.SofiaWeatherRepository
+import java.time.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+data class WeatherUiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val weatherPoints: List<GraphPoint> = emptyList(),
+    val latestWindSpeed: Double? = null,
+    val latestDataTimestamp: Instant? = null,
+    val lastFetchTimestamp: Instant? = null,
+    val selectedWindow: TimeWindow = TimeWindow.HOURS_24,
+    val errorMessage: String? = null,
+)
+
+class WeatherViewModel(
+    private val weatherRepository: SofiaWeatherRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(WeatherUiState())
+    val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+    private var observeJob: Job? = null
+
+    init {
+        startObserving()
+        refresh(forceLoading = true)
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000.milliseconds)
+                refresh()
+            }
+        }
+    }
+
+    private fun startObserving() {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            weatherRepository.observeWeather().collect { snapshot ->
+                _uiState.update {
+                    it.copy(
+                        weatherPoints = snapshot.points,
+                        latestWindSpeed = snapshot.latestWindSpeed,
+                        latestDataTimestamp = snapshot.latestDataTimestamp,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectWindow(window: TimeWindow) {
+        _uiState.update { it.copy(selectedWindow = window) }
+    }
+
+    fun refresh(forceLoading: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasExistingData = _uiState.value.weatherPoints.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    isLoading = forceLoading || !hasExistingData,
+                    isRefreshing = hasExistingData,
+                    errorMessage = null,
+                )
+            }
+            runCatching {
+                weatherRepository.refreshWeather()
+            }.onSuccess {
+                _uiState.update { it.copy(lastFetchTimestamp = Instant.now(), errorMessage = null) }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        lastFetchTimestamp = Instant.now(),
+                        errorMessage = throwable.message ?: "Unable to refresh weather data.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    class Factory(
+        private val weatherRepository: SofiaWeatherRepository,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            WeatherViewModel(weatherRepository) as T
+    }
+}
+===== Fichier: weather/WeatherScreen.kt =====
+
+package com.lemarc.sofia.ui.weather
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.lemarc.sofia.TimeWindow
+import com.lemarc.sofia.data.filterPoints
+import com.lemarc.sofia.ui.components.ChartCard
+import com.lemarc.sofia.ui.components.ErrorBanner
+import com.lemarc.sofia.ui.components.TimestampCard
+import com.lemarc.sofia.ui.components.TitleBanner
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WeatherScreen(
+    state: WeatherUiState,
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit,
+    onSelectWindow: (TimeWindow) -> Unit,
+    onDismissError: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+
+    val filteredWeather = remember(state.weatherPoints, state.selectedWindow) {
+        filterPoints(state.weatherPoints, state.selectedWindow)
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        when {
+            state.isLoading && state.weatherPoints.isEmpty() -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item { TitleBanner() }
+
+                if (state.errorMessage != null) {
+                    item {
+                        ErrorBanner(
+                            text = state.errorMessage,
+                            onDismiss = onDismissError,
+                        )
+                    }
+                }
+
+                if (state.latestWindSpeed != null) {
+                    item {
+                        WindSpeedCard(windSpeed = state.latestWindSpeed)
+                    }
+                }
+
+                item {
+                    ChartCard(
+                        points = filteredWeather,
+                        onSelectWindow  = onSelectWindow,
+                        selectedWindow = state.selectedWindow,
+                        unit = "m/s"
+                    )
+                }
+
+                item {
+                    TimestampCard(
+                        latestDataTimestamp = state.latestDataTimestamp,
+                        lastFetchTimestamp = state.lastFetchTimestamp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WindSpeedCard(windSpeed: Double) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.foundation.layout.Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Current Wind Speed",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "%.1f m/s".format(windSpeed),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}

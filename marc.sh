@@ -3,8 +3,8 @@
 # === PARAMÈTRES ===
 # /Users/marc/StudioProjects/Sofia_Android/app/src/main/java/com/lemarc/sofia
 # /Users/marc/Desktop/Sofia/SofiaCore/Sources/SofiaCore
-racine="/home/marcb/Sofia_iOS/Sofia"
-dossierSortie="/home/marcb/Sofia_iOS/dev"
+racine="/Users/marc/Desktop/Sofia/Sofia"
+dossierSortie="/Users/marc/Desktop/Sofia/dev"
 profondeur=-1   # -1 = pas de limite, 1 = un seul niveau
 
 dossiersIgnores=(
@@ -20,6 +20,7 @@ dossiersIgnores=(
 
 extensionsAutorisees=(
     ".swift"
+    ".kt"
 )
 
 # =========================================================
@@ -148,9 +149,9 @@ main() {
     mkdir -p "$dossierSortie"
 
     local cheminArborescence="$dossierSortie/arborescence.txt"
-    local cheminConcatenation="$dossierSortie/concatenation-data.txt"
+    local cheminConcatenation="$dossierSortie/concatenation-swift.txt"
 
-#    {
+#
 #        echo "$racine"
 #        generate_tree "$racine" "" 0
 #    } > "$cheminArborescence"

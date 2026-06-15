@@ -1,3 +1,11 @@
+//
+//  CapacityText.swift
+//  Sofia
+//
+//  Created by Marc Brunet on 15/06/2026.
+//
+
+
 import SwiftUI
 
 struct CapacityText: View {

@@ -331,19 +331,6 @@ public struct RemitResponse: Codable, Identifiable {
     }
 }
 
-// MARK: - Aggregated point for the chart (legacy, kept for compatibility)
-
-public struct AggregatedPoint: Identifiable {
-    public let id = UUID()
-    public let time: Date
-    public let totalMw: Double
-
-    public init(time: Date, totalMw: Double) {
-        self.time = time
-        self.totalMw = totalMw
-    }
-}
-
 // MARK: - Top Production (records), generic
 
 /// Generic single record point: a max quantity reached at a given date.

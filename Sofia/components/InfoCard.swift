@@ -1,3 +1,11 @@
+//
+//  InfoCard.swift
+//  Sofia
+//
+//  Created by Marc Brunet on 15/06/2026.
+//
+
+
 import SwiftUI
 
 struct InfoCard: View {
@@ -8,9 +16,7 @@ struct InfoCard: View {
             .font(.body)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemBackground))
-            )
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

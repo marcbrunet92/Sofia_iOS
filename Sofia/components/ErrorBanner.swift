@@ -1,3 +1,11 @@
+//
+//  ErrorBanner.swift
+//  Sofia
+//
+//  Created by Marc Brunet on 15/06/2026.
+//
+
+
 import SwiftUI
 
 struct ErrorBanner: View {
@@ -12,10 +20,12 @@ struct ErrorBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 8)
 
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .foregroundStyle(.red)
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
             }
+            .tint(.red)
         }
         .padding(8)
         .frame(maxWidth: .infinity)
