@@ -97,7 +97,7 @@ final class AggregationTests: XCTestCase {
         XCTAssertEqual(filterPoints(points, window: .all), points)
     }
 
-    func testFilterPointsLast7Days() {
+    func testFilterPointsDays7() {
         let now = Date()
         let day: TimeInterval = 24 * 60 * 60
         let points = [
@@ -106,13 +106,13 @@ final class AggregationTests: XCTestCase {
             GraphPoint(seriesId: "S", timeFrom: now, timeTo: now.addingTimeInterval(1800), quantity: 3.0),
         ]
 
-        let filtered = filterPoints(points, window: .last7Days)
+        let filtered = filterPoints(points, window: .days7)
 
         XCTAssertEqual(filtered.count, 2)
         XCTAssertEqual(filtered.map { $0.quantity }, [2.0, 3.0])
     }
 
     func testFilterPointsEmptyInput() {
-        XCTAssertEqual(filterPoints([], window: .last7Days), [])
+        XCTAssertEqual(filterPoints([], window: .days7), [])
     }
 }

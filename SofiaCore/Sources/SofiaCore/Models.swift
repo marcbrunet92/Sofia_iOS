@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(FoundationNetworking)
-    import FoundationNetworking
+import FoundationNetworking
 #endif
 
 // MARK: - BMU Groups
@@ -42,39 +42,55 @@ public enum AppMode {
 
 public enum SofiaConstants {
     /// Start of the history window requested from the API.
-    /// Equivalent to Android's HISTORY_START.
+    /// Mirrors Android's HISTORY_START = Instant.parse("2026-04-01T00:00:00Z").
     public static let historyStart: Date = {
-        var components = DateComponents()
-        components.year = 2024
-        components.month = 1
-        components.day = 1
-        components.hour = 0
-        components.minute = 0
-        components.second = 0
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        return calendar.date(from: components)!
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime]
+        return fmt.date(from: "2026-04-01T00:00:00Z")!
     }()
 }
 
 // MARK: - Time window filtering
 
-/// Equivalent of Android's TimeWindow enum.
-public enum TimeWindow {
+/// Equivalent of Android's TimeWindow enum (Constants.kt).
+/// CaseIterable + label for use in chip selectors.
+public enum TimeWindow: CaseIterable, Hashable {
+    case hours6
+    case hours24
+    case hours48
+    case days7
     case all
-    case last24h
-    case last7Days
-    case last30Days
-    case last90Days
 
     /// Duration to look back from the latest point, or nil for no filtering (all data).
     public var duration: TimeInterval? {
         switch self {
-        case .all:       return nil
-        case .last24h:   return 24 * 60 * 60
-        case .last7Days: return 7 * 24 * 60 * 60
-        case .last30Days: return 30 * 24 * 60 * 60
-        case .last90Days: return 90 * 24 * 60 * 60
+        case .hours6:  return 6 * 60 * 60
+        case .hours24: return 24 * 60 * 60
+        case .hours48: return 48 * 60 * 60
+        case .days7:   return 7 * 24 * 60 * 60
+        case .all:     return nil
+        }
+    }
+
+    /// Display label, matching Android's `label` property.
+    public var label: String {
+        switch self {
+        case .hours6:  return "6h"
+        case .hours24: return "24h"
+        case .hours48: return "48h"
+        case .days7:   return "7d"
+        case .all:     return "All"
+        }
+    }
+
+    /// Short date format for chart x-axis labels, mirroring Android's `shortAxisFormatter`.
+    public var axisDateFormat: String {
+        switch self {
+        case .hours6:  return "HH:mm"
+        case .hours24: return "MM-dd HH:mm"
+        case .hours48: return "MM-dd HH:mm"
+        case .days7:   return "MM-dd"
+        case .all:     return "MM-dd"
         }
     }
 }
