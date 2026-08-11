@@ -97,8 +97,8 @@ public extension SofiaAPIService {
 
     // MARK: - REMIT
 
-    /// Fetches active REMIT notices for all BMUs of the given mode, deduplicated and
-    /// sorted by publish time descending. Mirrors Android's `refreshRemits`.
+    /// Fetches REMIT notices for all BMUs of the given mode, deduplicated and
+    /// sorted by publish time descending.
     func fetchRemitNotices(mode: AppMode) async throws -> [RemitResponse] {
         let bmuIds = mode.bmuIds
 
@@ -106,7 +106,7 @@ public extension SofiaAPIService {
         try await withThrowingTaskGroup(of: [RemitResponse].self) { group in
             for bmuId in bmuIds {
                 group.addTask {
-                    try await self.listRemits(bmuId: bmuId, eventStatus: "Active", limit: 100, offset: 0)
+                    try await self.listRemits(bmuId: bmuId, eventStatus: nil, limit: 100, offset: 0)
                 }
             }
             for try await notices in group {
