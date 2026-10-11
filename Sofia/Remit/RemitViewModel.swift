@@ -52,8 +52,9 @@ final class RemitViewModel {
 
     private func startObserving(testMode: Bool) {
         observeTask?.cancel()
-        observeTask = Task { [weak self] in
-            await self?.reloadFromStore(testMode: testMode)
+        observeTask = Task<Void, Never> { [weak self] in
+            guard let self else { return }
+            await self.reloadFromStore(testMode: testMode)
         }
     }
 
@@ -77,8 +78,9 @@ final class RemitViewModel {
     @discardableResult
     func refresh(forceLoading: Bool = false) -> Task<Void, Never> {
         refreshTask?.cancel()
-        let task = Task { [weak self] in
-            await self?.performRefresh(forceLoading: forceLoading)
+        let task = Task<Void, Never> { [weak self] in
+            guard let self else { return }
+            await self.performRefresh(forceLoading: forceLoading)
         }
         refreshTask = task
         return task
