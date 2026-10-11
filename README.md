@@ -2,7 +2,7 @@
 
 iOS version of the Sofia Wind Farm app. It mirrors [Sofia_Android](https://github.com/marcbrunet92/Sofia_Android) screen for screen: same API, same data processing, same UI, same strings (English and French) and the same three home screen widgets.
 
-Requirements: Xcode 26, iOS 26.5 deployment target. The `Sofia` scheme is shared so Xcode Cloud can build it.
+Requirements: Xcode 26 or later, iOS 17 deployment target. The `Sofia` scheme is shared so Xcode Cloud can build it.
 
 ## Layout
 

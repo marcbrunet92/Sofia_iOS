@@ -74,18 +74,18 @@ struct SofiaRootView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("tab_graph", systemImage: "chart.xyaxis.line", value: AppTab.graph) {
-                GraphTab(viewModel: graphViewModel)
-            }
-            Tab("tab_remit", systemImage: "exclamationmark.triangle.fill", value: AppTab.remit) {
-                RemitTab(viewModel: remitViewModel)
-            }
-            Tab("tab_sofia", systemImage: "house.fill", value: AppTab.sofia) {
-                SofiaTab(viewModel: sofiaViewModel)
-            }
-            Tab("tab_settings", systemImage: "gearshape.fill", value: AppTab.settings) {
-                SettingsTab(viewModel: settingsViewModel)
-            }
+            GraphTab(viewModel: graphViewModel)
+                .tabItem { Label("tab_graph", systemImage: "chart.xyaxis.line") }
+                .tag(AppTab.graph)
+            RemitTab(viewModel: remitViewModel)
+                .tabItem { Label("tab_remit", systemImage: "exclamationmark.triangle.fill") }
+                .tag(AppTab.remit)
+            SofiaTab(viewModel: sofiaViewModel)
+                .tabItem { Label("tab_sofia", systemImage: "house.fill") }
+                .tag(AppTab.sofia)
+            SettingsTab(viewModel: settingsViewModel)
+                .tabItem { Label("tab_settings", systemImage: "gearshape.fill") }
+                .tag(AppTab.settings)
         }
         .tint(SofiaColors.primary)
     }
