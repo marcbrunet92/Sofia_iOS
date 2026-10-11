@@ -1,16 +1,12 @@
-//
-//  WidgetBundle.swift
-//  Widget
-//
-//  Created by Marc Brunet on 26/05/2026.
-//
-
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
+/// Les trois widgets de l'app Android : production en direct, disponibilité par unité, graphique.
 @main
-struct SofiaWindgetBundle: WidgetBundle {
+struct SofiaWidgetBundle: WidgetBundle {
     var body: some Widget {
-        SofiaWidget()
+        SofiaLiveWidget()
+        SofiaUnitsWidget()
+        SofiaGraphWidget()
     }
 }
