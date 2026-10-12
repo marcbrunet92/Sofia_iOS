@@ -28,6 +28,22 @@ public struct SofiaApiService: Sendable {
         ])
     }
 
+    /// GET pn/total : somme des 4 unités Sofia calculée par le serveur (bmu_id « SOFIA_TOTAL »).
+    public func getProductionTotal(timeFrom: String, timeTo: String) async throws -> [PnEntryDto] {
+        try await get("pn/total", query: [
+            URLQueryItem(name: "time_from", value: timeFrom),
+            URLQueryItem(name: "time_to", value: timeTo),
+        ])
+    }
+
+    /// PN du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
+    public func getProduction(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [PnEntryDto] {
+        if testMode {
+            return try await getProduction(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
+        }
+        return try await getProductionTotal(timeFrom: timeFrom, timeTo: timeTo)
+    }
+
     /// GET remit
     public func getRemits(
         bmuId: String? = nil,
@@ -57,6 +73,22 @@ public struct SofiaApiService: Sendable {
             URLQueryItem(name: "time_from", value: timeFrom),
             URLQueryItem(name: "time_to", value: timeTo),
         ])
+    }
+
+    /// GET b1610/total : somme des 4 unités Sofia calculée par le serveur (bmu_id « SOFIA_TOTAL »).
+    public func getB1610Total(timeFrom: String, timeTo: String) async throws -> [B1610EntryDto] {
+        try await get("b1610/total", query: [
+            URLQueryItem(name: "time_from", value: timeFrom),
+            URLQueryItem(name: "time_to", value: timeTo),
+        ])
+    }
+
+    /// B1610 du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
+    public func getB1610(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [B1610EntryDto] {
+        if testMode {
+            return try await getB1610(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
+        }
+        return try await getB1610Total(timeFrom: timeFrom, timeTo: timeTo)
     }
 
     /// GET b1610/top-production

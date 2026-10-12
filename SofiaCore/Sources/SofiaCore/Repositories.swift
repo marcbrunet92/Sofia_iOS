@@ -22,12 +22,10 @@ public struct SofiaProductionRepository: Sendable {
     }
 
     public func refresh(testMode: Bool) async throws {
-        let api = self.api
         let from = ApiTime.format(SofiaConstants.historyStart)
         let to = ApiTime.format(Date())
-        let entries = try await concurrentMap(SofiaConstants.bmus(testMode: testMode)) { bmuId in
-            try await api.getProduction(bmuId: bmuId, timeFrom: from, timeTo: to)
-        }.flatMap { $0 }
+        // Une seule série : la somme Sofia est calculée par le serveur
+        let entries = try await api.getProduction(testMode: testMode, timeFrom: from, timeTo: to)
         let points = aggregateProduction(entries, testMode: testMode)
         await store.refreshProductionPoints(testMode: testMode, points: points)
     }
@@ -54,23 +52,13 @@ public struct SofiaB1610Repository: Sendable {
     }
 
     public func refresh(testMode: Bool) async throws {
-        let api = self.api
         let from = ApiTime.format(SofiaConstants.historyStart)
         let to = ApiTime.format(Date())
-        // Comme sur Android, les records sont demandés en parallèle mais les échecs sont ignorés
-        // et l'écran utilise les maxima recalculés depuis les points.
-        async let top = Self.fetchTopProduction(api)
-        let entries = try await concurrentMap(SofiaConstants.bmus(testMode: testMode)) { bmuId in
-            try await api.getB1610(bmuId: bmuId, timeFrom: from, timeTo: to)
-        }.flatMap { $0 }
-        _ = await top
+        // Une seule série : la somme Sofia est calculée par le serveur.
+        // Les records sont recalculés localement (calculateTopWindows).
+        let entries = try await api.getB1610(testMode: testMode, timeFrom: from, timeTo: to)
         let points = aggregateB1610(entries, testMode: testMode)
         await store.refreshB1610Points(testMode: testMode, points: points)
-    }
-
-    private static func fetchTopProduction(_ api: SofiaApiService) async -> TopWindows {
-        guard let dto = try? await api.getB1610TopProduction() else { return .empty }
-        return topWindows(from: dto)
     }
 }
 

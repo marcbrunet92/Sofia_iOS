@@ -150,15 +150,14 @@ public enum SofiaWidgetData {
         let testMode = SofiaSettings.testMode
         let to = Date()
         let from = window.map { to.addingTimeInterval(-$0) } ?? SofiaConstants.historyStart
-        let bmus = SofiaConstants.bmus(testMode: testMode)
         let windowName = window.map { String(Int($0 / 60)) } ?? "all"
         let snapshotName = "live_\(windowName)_\(includeActual ? "a" : "c")"
         let fromString = ApiTime.format(from)
         let toString = ApiTime.format(to)
 
         let fresh: ([GraphPoint], [GraphPoint])? = try? await withTimeout(seconds: 30) {
-            async let committed = SofiaWidgetData.fetchCommitted(api: api, bmus: bmus, from: fromString, to: toString, testMode: testMode)
-            async let actual = SofiaWidgetData.fetchActual(include: includeActual, api: api, bmus: bmus, from: fromString, to: toString, testMode: testMode)
+            async let committed = SofiaWidgetData.fetchCommitted(api: api, from: fromString, to: toString, testMode: testMode)
+            async let actual = SofiaWidgetData.fetchActual(include: includeActual, api: api, from: fromString, to: toString, testMode: testMode)
             let committedPoints = try await committed
             let actualPoints = try await actual
             return (committedPoints, actualPoints)
@@ -222,33 +221,28 @@ public enum SofiaWidgetData {
         return data
     }
 
+    /// Somme Sofia calculée par le serveur (ou unité de test) : une requête.
     private static func fetchCommitted(
         api: SofiaApiService,
-        bmus: [String],
         from: String,
         to: String,
         testMode: Bool
     ) async throws -> [GraphPoint] {
-        let entries = try await concurrentMap(bmus) { id in
-            try await api.getProduction(bmuId: id, timeFrom: from, timeTo: to)
-        }
-        return aggregateProduction(entries.flatMap { $0 }, testMode: testMode)
+        let entries = try await api.getProduction(testMode: testMode, timeFrom: from, timeTo: to)
+        return aggregateProduction(entries, testMode: testMode)
     }
 
     /// B1610 en MW (MWh par demi-heure × 2) ; rien n'est chargé si `include` est faux.
     private static func fetchActual(
         include: Bool,
         api: SofiaApiService,
-        bmus: [String],
         from: String,
         to: String,
         testMode: Bool
     ) async throws -> [GraphPoint] {
         guard include else { return [] }
-        let entries = try await concurrentMap(bmus) { id in
-            try await api.getB1610(bmuId: id, timeFrom: from, timeTo: to)
-        }
-        return aggregateB1610(entries.flatMap { $0 }, testMode: testMode)
+        let entries = try await api.getB1610(testMode: testMode, timeFrom: from, timeTo: to)
+        return aggregateB1610(entries, testMode: testMode)
             .map { $0.with(quantity: $0.quantity * 2) }
     }
 }
