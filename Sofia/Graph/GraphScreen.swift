@@ -88,12 +88,12 @@ struct GraphScreen: View {
                     color: dataset.color
                 )
             case .weather:
-                // Même conversion et même unité affichée que l'app Android
+                // L'API donne le vent en km/h : / 3.6 pour l'afficher en m/s, comme l'app Android
                 return ChartSeries(
                     id: dataset.labelKey,
                     points: state.weatherPoints.map { $0.with(quantity: $0.quantity / 3.6) },
                     allowNegative: false,
-                    unit: "km/h",
+                    unit: "m/s",
                     color: dataset.color
                 )
             }
