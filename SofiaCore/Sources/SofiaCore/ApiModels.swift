@@ -189,3 +189,68 @@ extension RemitEntryDto {
         outageProfile = try container.decodeIfPresent(String.self, forKey: .outageProfile) ?? ""
     }
 }
+
+/// MEL (Maximum Export Limit) : même forme que `PnEntryDto` (level_mw en MW).
+public struct MelEntryDto: Decodable, Sendable {
+    public let bmuId: String
+    public let timeFrom: String
+    public let timeTo: String
+    public let settlementPeriod: Int
+    public let levelMw: Double
+
+    enum CodingKeys: String, CodingKey {
+        case bmuId = "bmu_id"
+        case timeFrom = "time_from"
+        case timeTo = "time_to"
+        case settlementPeriod = "settlement_period"
+        case levelMw = "level_mw"
+    }
+}
+
+extension MelEntryDto {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        bmuId = try container.decodeIfPresent(String.self, forKey: .bmuId) ?? ""
+        timeFrom = try container.decode(String.self, forKey: .timeFrom)
+        timeTo = try container.decode(String.self, forKey: .timeTo)
+        settlementPeriod = try container.decodeIfPresent(Int.self, forKey: .settlementPeriod) ?? 0
+        levelMw = try container.decodeIfPresent(Double.self, forKey: .levelMw) ?? 0
+    }
+}
+
+/// UOU2T14D : puissance utilisable prévue pour un jour (« yyyy-MM-dd »).
+public struct UouEntryDto: Decodable, Sendable {
+    public let bmuId: String
+    public let forecastDate: String
+    public let outputUsable: Double
+
+    enum CodingKeys: String, CodingKey {
+        case bmuId = "bmu_id"
+        case forecastDate = "forecast_date"
+        case outputUsable = "output_usable"
+    }
+}
+
+extension UouEntryDto {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        bmuId = try container.decodeIfPresent(String.self, forKey: .bmuId) ?? ""
+        forecastDate = try container.decode(String.self, forKey: .forecastDate)
+        outputUsable = try container.decodeIfPresent(Double.self, forKey: .outputUsable) ?? 0
+    }
+}
+
+/// AGWS : dernière demi-heure publiée de l'éolien et du solaire de Grande-Bretagne (MW).
+public struct AgwsLatestDto: Decodable, Sendable {
+    public let timeFrom: String?
+    public let windOffshoreMw: Double?
+    public let windOnshoreMw: Double?
+    public let solarMw: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case timeFrom = "time_from"
+        case windOffshoreMw = "wind_offshore_mw"
+        case windOnshoreMw = "wind_onshore_mw"
+        case solarMw = "solar_mw"
+    }
+}

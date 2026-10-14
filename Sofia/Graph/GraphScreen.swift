@@ -9,8 +9,12 @@ extension GraphDataset {
         case .pn: return Color(red: 30 / 255, green: 136 / 255, blue: 229 / 255)
         case .b1610: return Color(red: 255 / 255, green: 152 / 255, blue: 0 / 255)
         case .weather: return Color(red: 76 / 255, green: 175 / 255, blue: 80 / 255)
+        case .mel: return Color(red: 29 / 255, green: 158 / 255, blue: 117 / 255)
         }
     }
+
+    /// Ordre de dessin : le MEL (zone colorée) passe sous les courbes de production.
+    static let drawOrder: [GraphDataset] = [.mel, .pn, .b1610, .weather]
 }
 
 /// Équivalent de ui/graph/GraphScreen.kt.
@@ -61,6 +65,12 @@ struct GraphScreen: View {
                 selectedWindow: state.selectedWindow,
                 onSelectWindow: onSelectWindow
             )
+            NextDaysCard(
+                days: state.uouDays,
+                capacityMw: state.testMode ? nil : SofiaConstants.maxCapacityMw
+            )
+            GbContextCard(context: state.gbContext, pnPoints: state.pnPoints)
+            DatasetsInfoCard()
         }
         .padding(16)
     }
@@ -68,7 +78,10 @@ struct GraphScreen: View {
     /// Répartition des séries : MW à gauche, l'autre unité (vent) à droite ; si seule une unité
     /// non-MW est sélectionnée, elle passe à gauche.
     private static func makeSeries(_ state: GraphUiState) -> (left: [ChartSeries], right: [ChartSeries]) {
-        let series: [ChartSeries] = state.selectedDatasets.map { dataset in
+        let ordered = state.selectedDatasets.sorted {
+            (GraphDataset.drawOrder.firstIndex(of: $0) ?? 0) < (GraphDataset.drawOrder.firstIndex(of: $1) ?? 0)
+        }
+        let series: [ChartSeries] = ordered.map { dataset in
             switch dataset {
             case .pn:
                 return ChartSeries(
@@ -96,6 +109,15 @@ struct GraphScreen: View {
                     unit: "m/s",
                     color: dataset.color
                 )
+            case .mel:
+                return ChartSeries(
+                    id: dataset.labelKey,
+                    points: state.melPoints,
+                    allowNegative: false,
+                    unit: "MW",
+                    color: dataset.color,
+                    filled: true
+                )
             }
         }
 
@@ -118,7 +140,7 @@ private struct DatasetSelector: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach([GraphDataset.weather, .pn, .b1610], id: \.self) { option in
+                ForEach([GraphDataset.weather, .pn, .b1610, .mel], id: \.self) { option in
                     SofiaFilterChip(
                         label: L10n.string(option.labelKey),
                         selected: selected.contains(option),

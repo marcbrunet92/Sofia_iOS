@@ -34,6 +34,30 @@ public enum SofiaWidgetSnapshots {
         return data
     }
 
+    // MARK: - 14 prochains jours
+
+    public static func saveNextDays(_ data: NextDaysData) {
+        save(data, to: file("next_days"))
+    }
+
+    public static func loadNextDays() -> NextDaysData? {
+        guard var data = load(NextDaysData.self, from: file("next_days")) else { return nil }
+        data.fromCache = true
+        return data
+    }
+
+    // MARK: - Part de l'éolien GB
+
+    public static func saveGbShare(_ data: GbShareData) {
+        save(data, to: file("gb_share"))
+    }
+
+    public static func loadGbShare() -> GbShareData? {
+        guard var data = load(GbShareData.self, from: file("gb_share")) else { return nil }
+        data.fromCache = true
+        return data
+    }
+
     // MARK: - Fichiers
 
     private static func save<Value: Encodable>(_ value: Value, to url: URL?) {

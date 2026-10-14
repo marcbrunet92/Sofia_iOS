@@ -10,6 +10,8 @@ struct ChartSeries: Identifiable {
     let allowNegative: Bool
     let unit: String
     let color: Color
+    /// Zone sous la courbe colorée (MEL : plafond de production).
+    var filled: Bool = false
 }
 
 /// ProductionChartMulti.kt : écarte les séries vides et affiche le placeholder s'il ne reste rien.
@@ -89,6 +91,18 @@ struct ProductionChartContent: View {
 
     private func chart(plot: ChartPlot, bounds: ChartBounds, length: TimeInterval, format: AxisTimeFormat) -> some View {
         Chart {
+            // Zones colorées d'abord : elles passent sous les courbes
+            ForEach(plot.series.filter(\.filled)) { series in
+                ForEach(series.points, id: \.timeFrom) { point in
+                    AreaMark(
+                        x: .value("Time", point.timeFrom),
+                        yStart: .value("Base", 0.0),
+                        yEnd: .value("Value", point.quantity * series.scale)
+                    )
+                    .foregroundStyle(series.color.opacity(0.2))
+                    .interpolationMethod(.monotone)
+                }
+            }
             ForEach(plot.series) { series in
                 ForEach(series.points, id: \.timeFrom) { point in
                     LineMark(
@@ -272,6 +286,7 @@ struct PlottedSeries: Identifiable {
     let color: Color
     /// Facteur appliqué aux valeurs de l'axe de droite pour les ramener à l'échelle de gauche.
     let scale: Double
+    let filled: Bool
 }
 
 struct ChartPlot {
@@ -316,7 +331,8 @@ struct ChartPlot {
                 id: series.id,
                 points: visiblePoints(series.points, from: rangeStart, to: rangeEnd, bucket: bucket),
                 color: series.color,
-                scale: 1
+                scale: 1,
+                filled: series.filled
             ))
         }
         for series in right {
@@ -324,7 +340,8 @@ struct ChartPlot {
                 id: series.id,
                 points: visiblePoints(series.points, from: rangeStart, to: rangeEnd, bucket: bucket),
                 color: series.color,
-                scale: rightFactor
+                scale: rightFactor,
+                filled: series.filled
             ))
         }
         return ChartPlot(series: plotted, yScale: yScale, rightTicks: rightTicks, rightFactor: rightFactor)

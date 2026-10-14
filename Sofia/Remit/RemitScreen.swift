@@ -9,6 +9,9 @@ struct RemitScreen: View {
     let onDismissError: () -> Void
     let onNavigateToDetail: (Int) -> Void
 
+    /// Groupes dépliés (identifiant du groupe), conservés au retour du détail.
+    @State private var expandedGroups: Set<String> = []
+
     var body: some View {
         ZStack {
             SofiaColors.background
@@ -41,18 +44,47 @@ struct RemitScreen: View {
             if let units = state.units {
                 UnitsAvailabilityCard(data: units)
             }
-            InfoCard(text: String(localized: "remit_active_notices \(state.remits.count)"))
-            if state.remits.isEmpty {
+            let sections = state.sections
+            InfoCard(text: String(localized: "remit_active_notices \(sections.noticeCount)"))
+            if sections.noticeCount == 0 {
                 InfoCard(text: L10n.string("remit_no_active_notices"))
             } else {
-                ForEach(state.remits) { notice in
-                    RemitNoticeCard(notice: notice) {
-                        onNavigateToDetail(notice.id)
+                // En vigueur d'abord, puis « À venir »
+                ForEach(sections.current) { group in
+                    groupView(group)
+                }
+                if !sections.upcoming.isEmpty {
+                    UpcomingDivider()
+                    ForEach(sections.upcoming) { group in
+                        groupView(group)
                     }
                 }
             }
             InfoCard(text: L10n.format("remit_last_update_format", SofiaDateFormat.timestamp(state.lastFetchTimestamp)))
         }
         .padding(16)
+    }
+
+    @ViewBuilder
+    private func groupView(_ group: RemitGroup) -> some View {
+        if group.isFarmWide {
+            let expanded = expandedGroups.contains(group.id)
+            RemitGroupCard(
+                group: group,
+                expanded: expanded,
+                onToggle: {
+                    if expanded {
+                        expandedGroups.remove(group.id)
+                    } else {
+                        expandedGroups.insert(group.id)
+                    }
+                },
+                onOpenNotice: onNavigateToDetail
+            )
+        } else {
+            RemitNoticeCard(notice: group.first, phase: group.phase) {
+                onNavigateToDetail(group.first.id)
+            }
+        }
     }
 }

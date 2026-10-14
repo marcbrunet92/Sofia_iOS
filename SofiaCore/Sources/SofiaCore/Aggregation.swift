@@ -76,6 +76,16 @@ public func weatherGraphPoints(_ entries: [WeatherEntryDto]) -> [GraphPoint] {
     .sorted { $0.timeFrom < $1.timeFrom }
 }
 
+/// `List<MelEntryDto>.toMelPoints()` : une série déjà sommée par le serveur (ou l'unité de test).
+public func melGraphPoints(_ entries: [MelEntryDto], testMode: Bool) -> [GraphPoint] {
+    let seriesId = testMode ? SofiaConstants.testBmu : "SOFIA_TOTAL"
+    return entries.compactMap { dto -> GraphPoint? in
+        guard let from = ApiTime.parseUtc(dto.timeFrom), let to = ApiTime.parseUtc(dto.timeTo) else { return nil }
+        return GraphPoint(id: seriesId, timeFrom: from, timeTo: to, quantity: dto.levelMw)
+    }
+    .sorted { $0.timeFrom < $1.timeFrom }
+}
+
 /// `calculateTopProduction` / `calculateTopB1610` : maxima sur tout l'historique, 7, 30 et 90 jours.
 public func calculateTopWindows(_ points: [GraphPoint], now: Date = Date()) -> TopWindows {
     if points.isEmpty { return .empty }

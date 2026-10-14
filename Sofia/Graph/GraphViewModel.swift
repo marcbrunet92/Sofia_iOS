@@ -7,12 +7,14 @@ enum GraphDataset: CaseIterable, Hashable {
     case weather
     case pn
     case b1610
+    case mel
 
     var labelKey: String {
         switch self {
         case .weather: return "dataset_weather"
         case .pn: return "dataset_pn"
         case .b1610: return "dataset_b1610"
+        case .mel: return "dataset_mel"
         }
     }
 }
@@ -22,7 +24,7 @@ struct GraphUiState {
     var isRefreshing = false
     var selectedWindow: TimeWindow = .all
     /// Ordre d'insertion conservé, comme le `Set` (LinkedHashSet) Kotlin.
-    var selectedDatasets: [GraphDataset] = [.pn]
+    var selectedDatasets: [GraphDataset] = [.pn, .mel]
     // Données brutes
     /// MW
     var pnPoints: [GraphPoint] = []
@@ -30,6 +32,11 @@ struct GraphUiState {
     var b1610PointsMwh: [GraphPoint] = []
     /// Vitesse du vent telle que renvoyée par l'API
     var weatherPoints: [GraphPoint] = []
+    /// MW
+    var melPoints: [GraphPoint] = []
+    // Cartes sous le graphique
+    var uouDays: [UouDay] = []
+    var gbContext: GbContext?
     // Méta
     var latestDataTimestamp: Date?
     var lastFetchTimestamp: Date?
@@ -49,6 +56,8 @@ final class GraphViewModel {
     private let productionRepository: SofiaProductionRepository
     private let b1610Repository: SofiaB1610Repository
     private let weatherRepository: SofiaWeatherRepository
+    private let melRepository: SofiaMelRepository
+    private let contextRepository: SofiaContextRepository
 
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var observeTask: Task<Void, Never>?
@@ -59,11 +68,15 @@ final class GraphViewModel {
         productionRepository: SofiaProductionRepository,
         b1610Repository: SofiaB1610Repository,
         weatherRepository: SofiaWeatherRepository,
+        melRepository: SofiaMelRepository,
+        contextRepository: SofiaContextRepository,
         settingsRepository: SettingsRepository
     ) {
         self.productionRepository = productionRepository
         self.b1610Repository = b1610Repository
         self.weatherRepository = weatherRepository
+        self.melRepository = melRepository
+        self.contextRepository = contextRepository
 
         settingsRepository.testMode
             .sink { [weak self] enabled in
@@ -100,12 +113,20 @@ final class GraphViewModel {
         let production = productionRepository
         let actual = b1610Repository
         let weather = weatherRepository
+        let mel = melRepository
+        let context = contextRepository
         async let pnSnapshot = production.snapshot(testMode: testMode)
         async let b1610Snapshot = actual.snapshot(testMode: testMode)
         async let weatherSnapshot = weather.snapshot()
+        async let melPoints = mel.points(testMode: testMode)
+        async let uouDays = context.uouDays(testMode: testMode)
+        async let gbContext = context.gbContext()
         let pn = await pnSnapshot
         let b1610 = await b1610Snapshot
         let wind = await weatherSnapshot
+        let melValues = await melPoints
+        let uouValues = await uouDays
+        let gbValue = await gbContext
         guard !Task.isCancelled, uiState.testMode == testMode else { return }
 
         let latest = [pn.latestDataTimestamp, b1610.latestDataTimestamp, wind.latestDataTimestamp]
@@ -115,6 +136,9 @@ final class GraphViewModel {
         state.pnPoints = pn.points
         state.b1610PointsMwh = b1610.points
         state.weatherPoints = wind.points
+        state.melPoints = melValues
+        state.uouDays = uouValues
+        state.gbContext = gbValue
         state.latestDataTimestamp = latest
         state.isLoading = false
         state.isRefreshing = false
@@ -159,11 +183,16 @@ final class GraphViewModel {
         let production = productionRepository
         let actual = b1610Repository
         let weather = weatherRepository
+        let mel = melRepository
+        let context = contextRepository
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await production.refresh(testMode: testMode) }
                 group.addTask { try await actual.refresh(testMode: testMode) }
                 group.addTask { try await weather.refresh() }
+                group.addTask { try await mel.refresh(testMode: testMode) }
+                group.addTask { try await context.refreshUou(testMode: testMode) }
+                group.addTask { try await context.refreshGbContext() }
                 try await group.waitForAll()
             }
             guard !Task.isCancelled else { return }

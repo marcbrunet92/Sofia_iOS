@@ -96,6 +96,40 @@ public struct SofiaApiService: Sendable {
         try await get("b1610/top-production", query: [])
     }
 
+    /// GET mel/total : somme des MEL des 4 unités Sofia (bmu_id « SOFIA_TOTAL »).
+    public func getMelTotal(timeFrom: String, timeTo: String) async throws -> [MelEntryDto] {
+        try await get("mel/total", query: [
+            URLQueryItem(name: "time_from", value: timeFrom),
+            URLQueryItem(name: "time_to", value: timeTo),
+        ])
+    }
+
+    /// GET mel/{bmuId}
+    public func getMel(bmuId: String, timeFrom: String, timeTo: String) async throws -> [MelEntryDto] {
+        try await get("mel/\(bmuId)", query: [
+            URLQueryItem(name: "time_from", value: timeFrom),
+            URLQueryItem(name: "time_to", value: timeTo),
+        ])
+    }
+
+    /// MEL du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
+    public func getMel(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [MelEntryDto] {
+        if testMode {
+            return try await getMel(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
+        }
+        return try await getMelTotal(timeFrom: timeFrom, timeTo: timeTo)
+    }
+
+    /// Prévision UOU2T14D par jour à partir d'aujourd'hui : la somme Sofia, ou l'unité de test.
+    public func getUou(testMode: Bool) async throws -> [UouEntryDto] {
+        try await get(testMode ? "uou2t14d/\(SofiaConstants.testBmu)" : "uou2t14d/total", query: [])
+    }
+
+    /// GET agws/latest : dernière demi-heure de l'éolien et du solaire de Grande-Bretagne.
+    public func getAgwsLatest() async throws -> AgwsLatestDto {
+        try await get("agws/latest", query: [])
+    }
+
     private func get<T: Decodable>(_ path: String, query: [URLQueryItem]) async throws -> T {
         guard var components = URLComponents(string: baseURL + path) else {
             throw SofiaApiError.badURL(baseURL + path)

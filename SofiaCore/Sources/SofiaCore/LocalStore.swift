@@ -66,6 +66,36 @@ public actor SofiaLocalStore {
         write(sortedByPublishTimeDescending(notices), "remit_notices_\(suffix(testMode))")
     }
 
+    // MARK: - mel_points
+
+    public func melPoints(testMode: Bool) -> [GraphPoint] {
+        read([GraphPoint].self, "mel_points_\(suffix(testMode))") ?? []
+    }
+
+    public func refreshMelPoints(testMode: Bool, points: [GraphPoint]) {
+        write(points.sorted { $0.timeFrom < $1.timeFrom }, "mel_points_\(suffix(testMode))")
+    }
+
+    // MARK: - uou_days
+
+    public func uouDays(testMode: Bool) -> [UouDay] {
+        read([UouDay].self, "uou_days_\(suffix(testMode))") ?? []
+    }
+
+    public func refreshUouDays(testMode: Bool, days: [UouDay]) {
+        write(days.sorted { $0.date < $1.date }, "uou_days_\(suffix(testMode))")
+    }
+
+    // MARK: - gb_context
+
+    public func gbContext() -> GbContext? {
+        read(GbContext.self, "gb_context")
+    }
+
+    public func refreshGbContext(_ context: GbContext) {
+        write(context, "gb_context")
+    }
+
     // MARK: - Fichiers
 
     private func suffix(_ testMode: Bool) -> String {

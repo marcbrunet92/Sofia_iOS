@@ -8,6 +8,8 @@ struct RemitUiState {
     var isRefreshing = false
     var testMode = false
     var remits: [RemitNotice] = []
+    /// Avis en vigueur puis à venir, regroupés quand ils concernent tout le parc.
+    var sections = RemitSections()
     var units: UnitsData?
     var lastFetchTimestamp: Date?
     var errorMessageKey: String?
@@ -64,6 +66,7 @@ final class RemitViewModel {
         let now = Date()
         var state = uiState
         state.remits = remits
+        state.sections = groupRemits(remits, units: SofiaConstants.bmus(testMode: testMode), now: now)
         state.units = UnitsData(
             testMode: testMode,
             units: computeUnitStatuses(remits, testMode: testMode, now: now),

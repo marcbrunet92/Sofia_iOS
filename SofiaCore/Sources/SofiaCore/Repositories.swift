@@ -120,3 +120,66 @@ func fetchActiveRemits(api: SofiaApiService, testMode: Bool) async throws -> [Re
     let notices = distinctRemits(entries).map(remitNotice(from:))
     return notices.sorted { ($0.publishTime ?? .distantPast) > ($1.publishTime ?? .distantPast) }
 }
+
+/// Équivalent de SofiaMelRepository.kt : MEL (Maximum Export Limit), puissance maximale exportable (MW).
+public struct SofiaMelRepository: Sendable {
+    private let api: SofiaApiService
+    private let store: SofiaLocalStore
+
+    public init(api: SofiaApiService = .shared, store: SofiaLocalStore = .shared) {
+        self.api = api
+        self.store = store
+    }
+
+    /// `observeMel` : points en cache.
+    public func points(testMode: Bool) async -> [GraphPoint] {
+        await store.melPoints(testMode: testMode)
+    }
+
+    public func refresh(testMode: Bool) async throws {
+        // Une seule série : la somme Sofia est calculée par le serveur
+        let entries = try await api.getMel(
+            testMode: testMode,
+            timeFrom: ApiTime.format(SofiaConstants.historyStart),
+            timeTo: ApiTime.format(Date())
+        )
+        await store.refreshMelPoints(testMode: testMode, points: melGraphPoints(entries, testMode: testMode))
+    }
+}
+
+/// Équivalent de SofiaContextRepository.kt : prévision de disponibilité à 14 jours (UOU2T14D)
+/// et éolien de toute la Grande-Bretagne (AGWS), affichés sous le graphique.
+public struct SofiaContextRepository: Sendable {
+    private let api: SofiaApiService
+    private let store: SofiaLocalStore
+
+    public init(api: SofiaApiService = .shared, store: SofiaLocalStore = .shared) {
+        self.api = api
+        self.store = store
+    }
+
+    public func uouDays(testMode: Bool) async -> [UouDay] {
+        await store.uouDays(testMode: testMode)
+    }
+
+    public func gbContext() async -> GbContext? {
+        await store.gbContext()
+    }
+
+    public func refreshUou(testMode: Bool) async throws {
+        let entries = try await api.getUou(testMode: testMode)
+        let days = entries.map { UouDay(date: $0.forecastDate, outputUsableMw: $0.outputUsable) }
+        await store.refreshUouDays(testMode: testMode, days: days)
+    }
+
+    public func refreshGbContext() async throws {
+        let latest = try await api.getAgwsLatest()
+        guard let timeFrom = ApiTime.parseInstant(latest.timeFrom) else { return }
+        await store.refreshGbContext(GbContext(
+            timeFrom: timeFrom,
+            windOffshoreMw: latest.windOffshoreMw,
+            windOnshoreMw: latest.windOnshoreMw,
+            solarMw: latest.solarMw
+        ))
+    }
+}

@@ -1,6 +1,40 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "gb_source_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AGWS · %1$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AGWS · %1$@"
+          }
+        }
+      }
+    },
+    "next_days_label_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$ld MW"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$ld MW"
+          }
+        }
+      }
+    },
     "time_window_1m" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -528,6 +562,142 @@
         }
       }
     },
+    "widget_gb_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia's announced output compared to offshore wind across Great Britain (AGWS)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Production annoncée de Sofia comparée à l'éolien en mer de Grande-Bretagne (AGWS)"
+          }
+        }
+      }
+    },
+    "widget_gb_header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOFIA VS GB"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOFIA VS GB"
+          }
+        }
+      }
+    },
+    "widget_gb_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia · Share of GB wind"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia · Part de l'éolien GB"
+          }
+        }
+      }
+    },
+    "widget_gb_of_all_wind_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of all GB wind"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ de tout l'éolien GB"
+          }
+        }
+      }
+    },
+    "widget_gb_of_offshore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "of GB offshore wind"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "de l'éolien en mer GB"
+          }
+        }
+      }
+    },
+    "widget_gb_offshore_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GB offshore %1$@ GW"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En mer GB %1$@ GW"
+          }
+        }
+      }
+    },
+    "widget_gb_onshore_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GB onshore %1$@ GW"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terrestre GB %1$@ GW"
+          }
+        }
+      }
+    },
+    "widget_gb_sofia_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia (PN) %1$@ MW"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia (PN) %1$@ MW"
+          }
+        }
+      }
+    },
     "widget_graph_actual" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -915,6 +1085,91 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$ld MW"
+          }
+        }
+      }
+    },
+    "widget_next_days_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planned availability for each of the next 14 days (UOU2T14D)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponibilité prévue pour chacun des 14 prochains jours (UOU2T14D)"
+          }
+        }
+      }
+    },
+    "widget_next_days_header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NEXT 14 DAYS"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 PROCHAINS JOURS"
+          }
+        }
+      }
+    },
+    "widget_next_days_header_short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 DAYS"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 JOURS"
+          }
+        }
+      }
+    },
+    "widget_next_days_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia · Next 14 days"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia · 14 prochains jours"
+          }
+        }
+      }
+    },
+    "widget_next_days_today_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today %1$ld MW"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd'hui %1$ld MW"
           }
         }
       }

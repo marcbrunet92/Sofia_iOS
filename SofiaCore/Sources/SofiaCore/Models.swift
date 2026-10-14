@@ -138,6 +138,45 @@ public struct RemitNotice: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+/// Puissance utilisable prévue pour un jour (UOU2T14D), en MW. `date` au format « yyyy-MM-dd ».
+public struct UouDay: Codable, Hashable, Sendable {
+    public let date: String
+    public let outputUsableMw: Double
+
+    public init(date: String, outputUsableMw: Double) {
+        self.date = date
+        self.outputUsableMw = outputUsableMw
+    }
+
+    /// Minuit du jour dans le fuseau de l'appareil (pour l'affichage).
+    public var localDate: Date? {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
+    /// « yyyy-MM-dd » d'aujourd'hui dans le fuseau de l'appareil (comparable à `date`).
+    public static func today(now: Date = Date()) -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: now)
+        return String(format: "%04ld-%02ld-%02ld", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+}
+
+/// Dernière demi-heure publiée de l'éolien et du solaire de Grande-Bretagne (AGWS), en MW.
+public struct GbContext: Codable, Hashable, Sendable {
+    public let timeFrom: Date
+    public let windOffshoreMw: Double?
+    public let windOnshoreMw: Double?
+    public let solarMw: Double?
+
+    public init(timeFrom: Date, windOffshoreMw: Double?, windOnshoreMw: Double?, solarMw: Double?) {
+        self.timeFrom = timeFrom
+        self.windOffshoreMw = windOffshoreMw
+        self.windOnshoreMw = windOnshoreMw
+        self.solarMw = solarMw
+    }
+}
+
 extension String {
     /// Équivalent Kotlin de `isBlank()`.
     public var isBlank: Bool {

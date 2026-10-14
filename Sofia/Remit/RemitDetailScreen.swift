@@ -69,12 +69,14 @@ struct RemitDetailScreen: View {
                 }
 
                 // ── Profil d'indisponibilité ─────────────────────────────────
-                if !notice.outageProfile.isBlank {
+                let profile = parseOutageProfile(notice.outageProfile)
+                if !profile.isEmpty {
                     SofiaDivider()
                     SectionTitle(key: "remit_detail_outage_profile")
-                    Text(notice.outageProfile)
-                        .font(.system(size: 12, design: .monospaced))
+                    Text("remit_profile_caption")
+                        .font(SofiaType.bodySmall)
                         .foregroundStyle(SofiaColors.onSurfaceVariant)
+                    OutageProfileChart(steps: profile, normalMw: notice.normalCapacityMw)
                 }
 
                 Spacer().frame(height: 16)

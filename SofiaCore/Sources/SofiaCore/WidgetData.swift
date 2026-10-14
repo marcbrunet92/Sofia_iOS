@@ -71,6 +71,65 @@ public struct UnitStatus: Codable, Hashable, Sendable {
     }
 }
 
+/// Puissance utilisable prévue par jour (UOU2T14D), pour le widget « 14 prochains jours ».
+public struct NextDaysData: Codable, Sendable {
+    public let testMode: Bool
+    public let days: [UouDay]
+    public let fetchedAt: Date
+    public var fromCache: Bool
+
+    public init(testMode: Bool, days: [UouDay], fetchedAt: Date, fromCache: Bool) {
+        self.testMode = testMode
+        self.days = days
+        self.fetchedAt = fetchedAt
+        self.fromCache = fromCache
+    }
+}
+
+/// Production annoncée de Sofia (PN) comparée à l'éolien de Grande-Bretagne (AGWS) sur la même
+/// demi-heure, la dernière publiée par AGWS.
+public struct GbShareData: Codable, Sendable {
+    public let testMode: Bool
+    public let timeFrom: Date?
+    public let sofiaMw: Double?
+    public let offshoreMw: Double?
+    public let onshoreMw: Double?
+    public let fetchedAt: Date
+    public var fromCache: Bool
+
+    public init(
+        testMode: Bool,
+        timeFrom: Date?,
+        sofiaMw: Double?,
+        offshoreMw: Double?,
+        onshoreMw: Double?,
+        fetchedAt: Date,
+        fromCache: Bool
+    ) {
+        self.testMode = testMode
+        self.timeFrom = timeFrom
+        self.sofiaMw = sofiaMw
+        self.offshoreMw = offshoreMw
+        self.onshoreMw = onshoreMw
+        self.fetchedAt = fetchedAt
+        self.fromCache = fromCache
+    }
+
+    /// Part de Sofia dans l'éolien en mer GB, en %.
+    public var offshoreSharePercent: Double? { shareOf(offshoreMw) }
+
+    /// Part de Sofia dans tout l'éolien GB (en mer + terrestre), en %.
+    public var windSharePercent: Double? {
+        guard let offshoreMw, let onshoreMw else { return nil }
+        return shareOf(offshoreMw + onshoreMw)
+    }
+
+    private func shareOf(_ totalMw: Double?) -> Double? {
+        guard let sofiaMw, let totalMw, totalMw > 0 else { return nil }
+        return sofiaMw / totalMw * 100
+    }
+}
+
 public struct UnitsData: Codable, Sendable {
     public let testMode: Bool
     public let units: [UnitStatus]
@@ -219,6 +278,88 @@ public enum SofiaWidgetData {
             SofiaWidgetSnapshots.saveUnits(data)
         }
         return data
+    }
+
+    /// Prévision UOU2T14D à partir d'aujourd'hui ; en secours le dernier instantané, puis le cache de l'app.
+    public static func loadNextDays(
+        api: SofiaApiService = .shared,
+        store: SofiaLocalStore = .shared
+    ) async -> NextDaysData {
+        let testMode = SofiaSettings.testMode
+        let now = Date()
+
+        let fresh: [UouDay]? = try? await withTimeout(seconds: 20) {
+            try await api.getUou(testMode: testMode)
+                .map { UouDay(date: $0.forecastDate, outputUsableMw: $0.outputUsable) }
+        }
+
+        if let fresh {
+            let data = NextDaysData(testMode: testMode, days: fresh, fetchedAt: now, fromCache: false)
+            SofiaWidgetSnapshots.saveNextDays(data)
+            return data
+        }
+        if let snapshot = SofiaWidgetSnapshots.loadNextDays(), snapshot.testMode == testMode {
+            return snapshot
+        }
+        let cached = await store.uouDays(testMode: testMode)
+        return NextDaysData(testMode: testMode, days: cached, fetchedAt: now, fromCache: true)
+    }
+
+    /// Dernière demi-heure AGWS et PN de Sofia sur la même demi-heure (le B1610 arrive trop tard).
+    /// En secours le dernier instantané, puis le cache de l'app.
+    public static func loadGbShare(
+        api: SofiaApiService = .shared,
+        store: SofiaLocalStore = .shared
+    ) async -> GbShareData {
+        let testMode = SofiaSettings.testMode
+        let now = Date()
+
+        let fresh: GbShareData? = try? await withTimeout(seconds: 20) {
+            let gb = try await api.getAgwsLatest()
+            let timeFrom = ApiTime.parseInstant(gb.timeFrom)
+            var sofiaMw: Double? = nil
+            if let timeFrom {
+                let entries = try await api.getProduction(
+                    testMode: testMode,
+                    timeFrom: ApiTime.format(timeFrom),
+                    timeTo: ApiTime.format(timeFrom.addingTimeInterval(30 * 60))
+                )
+                sofiaMw = aggregateProduction(entries, testMode: testMode)
+                    .first(where: { $0.timeFrom == timeFrom })?.quantity
+            }
+            return GbShareData(
+                testMode: testMode,
+                timeFrom: timeFrom,
+                sofiaMw: sofiaMw,
+                offshoreMw: gb.windOffshoreMw,
+                onshoreMw: gb.windOnshoreMw,
+                fetchedAt: now,
+                fromCache: false
+            )
+        }
+
+        if let fresh {
+            SofiaWidgetSnapshots.saveGbShare(fresh)
+            return fresh
+        }
+        if let snapshot = SofiaWidgetSnapshots.loadGbShare(), snapshot.testMode == testMode {
+            return snapshot
+        }
+        let gb = await store.gbContext()
+        var sofiaMw: Double? = nil
+        if let gb {
+            let points = await store.productionPoints(testMode: testMode)
+            sofiaMw = points.last(where: { $0.timeFrom == gb.timeFrom })?.quantity
+        }
+        return GbShareData(
+            testMode: testMode,
+            timeFrom: gb?.timeFrom,
+            sofiaMw: sofiaMw,
+            offshoreMw: gb?.windOffshoreMw,
+            onshoreMw: gb?.windOnshoreMw,
+            fetchedAt: now,
+            fromCache: true
+        )
     }
 
     /// Somme Sofia calculée par le serveur (ou unité de test) : une requête.

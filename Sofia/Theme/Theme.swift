@@ -31,6 +31,9 @@ enum SofiaColors {
     static let onSurface = dynamic(light: 0x1D1B20, dark: 0xE6E0E9)
     static let onSurfaceVariant = dynamic(light: 0x49454F, dark: 0xCAC4D0)
     static let error = dynamic(light: 0xB3261E, dark: 0xF2B8B5)
+    /// `colorScheme.errorContainer` / `onErrorContainer` (puce « Imprévu » des avis REMIT).
+    static let materialErrorContainer = dynamic(light: 0xF9DEDC, dark: 0x8C1D18)
+    static let onErrorContainer = dynamic(light: 0x8C1D18, dark: 0xF9DEDC)
     static let secondaryContainer = dynamic(light: 0xE8DEF8, dark: 0x4A4458)
     static let onSecondaryContainer = dynamic(light: 0x1D192B, dark: 0xE8DEF8)
 

@@ -25,6 +25,8 @@ struct SofiaApp: App {
             productionRepository: SofiaProductionRepository(api: api, store: store),
             b1610Repository: SofiaB1610Repository(api: api, store: store),
             weatherRepository: SofiaWeatherRepository(api: api, store: store),
+            melRepository: SofiaMelRepository(api: api, store: store),
+            contextRepository: SofiaContextRepository(api: api, store: store),
             settingsRepository: settingsRepository
         ))
         _sofiaViewModel = State(initialValue: SofiaViewModel())
