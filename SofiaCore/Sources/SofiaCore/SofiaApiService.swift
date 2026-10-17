@@ -36,14 +36,6 @@ public struct SofiaApiService: Sendable {
         ])
     }
 
-    /// PN du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
-    public func getProduction(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [PnEntryDto] {
-        if testMode {
-            return try await getProduction(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
-        }
-        return try await getProductionTotal(timeFrom: timeFrom, timeTo: timeTo)
-    }
-
     /// GET remit
     public func getRemits(
         bmuId: String? = nil,
@@ -83,14 +75,6 @@ public struct SofiaApiService: Sendable {
         ])
     }
 
-    /// B1610 du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
-    public func getB1610(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [B1610EntryDto] {
-        if testMode {
-            return try await getB1610(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
-        }
-        return try await getB1610Total(timeFrom: timeFrom, timeTo: timeTo)
-    }
-
     /// GET b1610/top-production
     public func getB1610TopProduction() async throws -> B1610TopProductionWindowsDto {
         try await get("b1610/top-production", query: [])
@@ -112,17 +96,14 @@ public struct SofiaApiService: Sendable {
         ])
     }
 
-    /// MEL du mode courant : la somme Sofia calculée par le serveur, ou l'unité de test.
-    public func getMel(testMode: Bool, timeFrom: String, timeTo: String) async throws -> [MelEntryDto] {
-        if testMode {
-            return try await getMel(bmuId: SofiaConstants.testBmu, timeFrom: timeFrom, timeTo: timeTo)
-        }
-        return try await getMelTotal(timeFrom: timeFrom, timeTo: timeTo)
+    /// GET uou2t14d/total : puissance utilisable prévue par jour à partir d'aujourd'hui (UTC), somme Sofia.
+    public func getUouTotal() async throws -> [UouEntryDto] {
+        try await get("uou2t14d/total", query: [])
     }
 
-    /// Prévision UOU2T14D par jour à partir d'aujourd'hui : la somme Sofia, ou l'unité de test.
-    public func getUou(testMode: Bool) async throws -> [UouEntryDto] {
-        try await get(testMode ? "uou2t14d/\(SofiaConstants.testBmu)" : "uou2t14d/total", query: [])
+    /// GET uou2t14d/{bmuId}
+    public func getUou(bmuId: String) async throws -> [UouEntryDto] {
+        try await get("uou2t14d/\(bmuId)", query: [])
     }
 
     /// GET agws/latest : dernière demi-heure de l'éolien et du solaire de Grande-Bretagne.

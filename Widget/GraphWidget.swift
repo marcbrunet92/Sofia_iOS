@@ -148,14 +148,10 @@ struct GraphWidgetView: View {
 
     private var title: String {
         let shortTitle = L10n.string(entry.window.shortTitleKey)
-        let base: String
         if entry.data?.fromCache == true {
-            base = L10n.format("widget_graph_title_offline_format", shortTitle)
-        } else {
-            base = L10n.format("widget_graph_title_online_format", shortTitle)
+            return L10n.format("widget_graph_title_offline_format", shortTitle)
         }
-        let suffix = entry.data?.testMode == true ? L10n.string("widget_graph_title_test_suffix") : ""
-        return base + suffix
+        return L10n.format("widget_graph_title_online_format", shortTitle)
     }
 
     private func lines(_ data: LiveData, showActual: Bool) -> [WidgetChartLine] {

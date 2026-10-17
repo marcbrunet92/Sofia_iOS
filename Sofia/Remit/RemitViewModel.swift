@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import Observation
 import SofiaCore
@@ -6,7 +5,6 @@ import SofiaCore
 struct RemitUiState {
     var isLoading = true
     var isRefreshing = false
-    var testMode = false
     var remits: [RemitNotice] = []
     /// Avis en vigueur puis à venir, regroupés quand ils concernent tout le parc.
     var sections = RemitSections()
@@ -25,16 +23,12 @@ final class RemitViewModel {
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var observeTask: Task<Void, Never>?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
-    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
-    init(repository: SofiaRemitRepository, settingsRepository: SettingsRepository) {
+    init(repository: SofiaRemitRepository) {
         self.repository = repository
 
-        settingsRepository.testMode
-            .sink { [weak self] enabled in
-                self?.onTestModeChanged(enabled)
-            }
-            .store(in: &cancellables)
+        startObserving()
+        refresh(forceLoading: uiState.remits.isEmpty)
 
         // Rafraîchissement automatique toutes les 120 s
         pollingTask = Task { [weak self] in
@@ -46,30 +40,23 @@ final class RemitViewModel {
         }
     }
 
-    private func onTestModeChanged(_ enabled: Bool) {
-        uiState.testMode = enabled
-        startObserving(testMode: enabled)
-        refresh(forceLoading: uiState.remits.isEmpty)
-    }
-
-    private func startObserving(testMode: Bool) {
+    private func startObserving() {
         observeTask?.cancel()
         observeTask = Task<Void, Never> { [weak self] in
             guard let self else { return }
-            await self.reloadFromStore(testMode: testMode)
+            await self.reloadFromStore()
         }
     }
 
-    private func reloadFromStore(testMode: Bool) async {
-        let remits = await repository.remits(testMode: testMode)
-        guard !Task.isCancelled, uiState.testMode == testMode else { return }
+    private func reloadFromStore() async {
+        let remits = await repository.remits()
+        guard !Task.isCancelled else { return }
         let now = Date()
         var state = uiState
         state.remits = remits
-        state.sections = groupRemits(remits, units: SofiaConstants.bmus(testMode: testMode), now: now)
+        state.sections = groupRemits(remits, units: SofiaConstants.bmus, now: now)
         state.units = UnitsData(
-            testMode: testMode,
-            units: computeUnitStatuses(remits, testMode: testMode, now: now),
+            units: computeUnitStatuses(remits, now: now),
             fetchedAt: now,
             fromCache: false
         )
@@ -94,14 +81,10 @@ final class RemitViewModel {
         var state = uiState
         state.isLoading = forceLoading || !hasExistingData
         state.isRefreshing = hasExistingData
-        // NB : Android affiche ici l'erreur dès le début du rafraîchissement ; on l'efface
-        // plutôt (comme GraphViewModel) pour ne pas faire clignoter la bannière à chaque rafraîchissement.
-        state.errorMessageKey = nil
         uiState = state
 
-        let testMode = uiState.testMode
         do {
-            try await repository.refresh(testMode: testMode)
+            try await repository.refresh()
             guard !Task.isCancelled else { return }
             uiState.lastFetchTimestamp = Date()
             uiState.errorMessageKey = nil
@@ -115,7 +98,7 @@ final class RemitViewModel {
             failed.errorMessageKey = "error_unable_to_refresh_remit"
             uiState = failed
         }
-        await reloadFromStore(testMode: testMode)
+        await reloadFromStore()
     }
 
     func dismissError() {

@@ -35,13 +35,12 @@ final class SofiaCoreTests: XCTestCase {
             pn("T_SOFOW-12", "2026-10-10T00:00:00", "2026-10-10T00:30:00", 3, 100),
             pn("T_SOFOW-11", "2026-10-10T00:00:00", "2026-10-10T00:30:00", 3, 168),
         ]
-        let points = aggregateProduction(entries, testMode: false)
+        let points = aggregateProduction(entries)
         XCTAssertEqual(points.count, 2)
         XCTAssertEqual(points[0].quantity, 268)
         XCTAssertEqual(points[1].quantity, 168)
         XCTAssertEqual(points[0].id, "SOFIA_TOTAL")
         XCTAssertLessThan(points[0].timeFrom, points[1].timeFrom)
-        XCTAssertEqual(aggregateProduction(entries, testMode: true).first?.id, SofiaConstants.testBmu)
     }
 
     func testUnitStatusesUseActiveNotices() {
@@ -62,7 +61,7 @@ final class SofiaCoreTests: XCTestCase {
             start: now.addingTimeInterval(-7_200),
             end: now.addingTimeInterval(-3_600)
         )
-        let units = computeUnitStatuses([notice, expired], testMode: false, now: now)
+        let units = computeUnitStatuses([notice, expired], now: now)
         XCTAssertEqual(units.map(\.bmuId), SofiaConstants.bmus)
         XCTAssertEqual(units[0].availableMw, 188)
         XCTAssertEqual(units[0].normalMw, 336)
@@ -89,6 +88,39 @@ final class SofiaCoreTests: XCTestCase {
         XCTAssertEqual(calculateTopWindows([], now: now), .empty)
     }
 
+    func testUnitNumber() {
+        XCTAssertEqual(unitNumber("T_SOFOW-11"), "11")
+        XCTAssertEqual(unitNumber("T_HEYM11"), "HEYM11")
+    }
+
+    func testGroupOutageProfileSumsUnitsStepByStep() {
+        let now = Date(timeIntervalSince1970: 1_791_592_200)
+        let first = remit(
+            bmuId: "T_SOFOW-11", normal: 350, available: 0, unavailable: 350, start: now, end: nil,
+            outageProfile: """
+            [{"startTime":"2026-10-10T00:00:00Z","endTime":"2026-10-10T02:00:00Z","capacity":100}]
+            """
+        )
+        let second = remit(
+            bmuId: "T_SOFOW-12", normal: 350, available: 0, unavailable: 350, start: now, end: nil,
+            outageProfile: """
+            [{"startTime":"2026-10-10T00:00:00Z","endTime":"2026-10-10T01:00:00Z","capacity":50},
+             {"startTime":"2026-10-10T01:00:00Z","endTime":"2026-10-10T02:00:00Z","capacity":200}]
+            """
+        )
+        let withoutProfile = remit(bmuId: "T_SOFOW-21", normal: 350, available: 0, unavailable: 350, start: now, end: nil)
+        let group = RemitGroup(id: "group", phase: .current, notices: [first, second], isFarmWide: true)
+        XCTAssertEqual(group.title, "Ambient Conditions")
+        let profile = group.outageProfile()
+        XCTAssertEqual(profile.map(\.capacityMw), [150, 300])
+        XCTAssertEqual(profile.first?.start, ApiTime.parseInstant("2026-10-10T00:00:00Z"))
+        XCTAssertEqual(profile.last?.end, ApiTime.parseInstant("2026-10-10T02:00:00Z"))
+
+        // Une unité sans profil : pas de profil de groupe
+        let partial = RemitGroup(id: "partial", phase: .current, notices: [first, withoutProfile], isFarmWide: true)
+        XCTAssertTrue(partial.outageProfile().isEmpty)
+    }
+
     // MARK: - Helpers
 
     private func pn(_ bmu: String, _ from: String, _ to: String, _ period: Int, _ mw: Double) -> PnEntryDto {
@@ -101,7 +133,8 @@ final class SofiaCoreTests: XCTestCase {
         available: Double?,
         unavailable: Double?,
         start: Date?,
-        end: Date?
+        end: Date?,
+        outageProfile: String = ""
     ) -> RemitNotice {
         RemitNotice(
             id: Int.random(in: 1...1_000_000),
@@ -123,7 +156,7 @@ final class SofiaCoreTests: XCTestCase {
             cause: "Ambient Conditions",
             relatedInformation: "",
             publishTime: start,
-            outageProfile: ""
+            outageProfile: outageProfile
         )
     }
 }

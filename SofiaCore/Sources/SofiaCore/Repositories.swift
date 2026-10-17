@@ -11,8 +11,8 @@ public struct SofiaProductionRepository: Sendable {
     }
 
     /// `observeProduction` : instantané du cache local.
-    public func snapshot(testMode: Bool) async -> ProductionSnapshot {
-        let points = await store.productionPoints(testMode: testMode)
+    public func snapshot() async -> ProductionSnapshot {
+        let points = await store.productionPoints()
         return ProductionSnapshot(
             points: points,
             currentMw: points.last?.quantity ?? 0,
@@ -21,13 +21,12 @@ public struct SofiaProductionRepository: Sendable {
         )
     }
 
-    public func refresh(testMode: Bool) async throws {
+    public func refresh() async throws {
         let from = ApiTime.format(SofiaConstants.historyStart)
         let to = ApiTime.format(Date())
         // Une seule série : la somme Sofia est calculée par le serveur
-        let entries = try await api.getProduction(testMode: testMode, timeFrom: from, timeTo: to)
-        let points = aggregateProduction(entries, testMode: testMode)
-        await store.refreshProductionPoints(testMode: testMode, points: points)
+        let entries = try await api.getProductionTotal(timeFrom: from, timeTo: to)
+        await store.refreshProductionPoints(aggregateProduction(entries))
     }
 }
 
@@ -42,8 +41,8 @@ public struct SofiaB1610Repository: Sendable {
     }
 
     /// `observeB1610` : instantané du cache local.
-    public func snapshot(testMode: Bool) async -> B1610Snapshot {
-        let points = await store.b1610Points(testMode: testMode)
+    public func snapshot() async -> B1610Snapshot {
+        let points = await store.b1610Points()
         return B1610Snapshot(
             points: points,
             latestDataTimestamp: points.last?.timeTo,
@@ -51,14 +50,13 @@ public struct SofiaB1610Repository: Sendable {
         )
     }
 
-    public func refresh(testMode: Bool) async throws {
+    public func refresh() async throws {
         let from = ApiTime.format(SofiaConstants.historyStart)
         let to = ApiTime.format(Date())
         // Une seule série : la somme Sofia est calculée par le serveur.
         // Les records sont recalculés localement (calculateTopWindows).
-        let entries = try await api.getB1610(testMode: testMode, timeFrom: from, timeTo: to)
-        let points = aggregateB1610(entries, testMode: testMode)
-        await store.refreshB1610Points(testMode: testMode, points: points)
+        let entries = try await api.getB1610Total(timeFrom: from, timeTo: to)
+        await store.refreshB1610Points(aggregateB1610(entries))
     }
 }
 
@@ -102,19 +100,19 @@ public struct SofiaRemitRepository: Sendable {
     }
 
     /// `observeRemits` : avis en cache, du plus récent au plus ancien.
-    public func remits(testMode: Bool) async -> [RemitNotice] {
-        await store.remitNotices(testMode: testMode)
+    public func remits() async -> [RemitNotice] {
+        await store.remitNotices()
     }
 
-    public func refresh(testMode: Bool) async throws {
-        let notices = try await fetchActiveRemits(api: api, testMode: testMode)
-        await store.refreshRemitNotices(testMode: testMode, notices: notices)
+    public func refresh() async throws {
+        let notices = try await fetchActiveRemits(api: api)
+        await store.refreshRemitNotices(notices)
     }
 }
 
 /// Appels REMIT partagés par l'app et le widget « disponibilité par unité ».
-func fetchActiveRemits(api: SofiaApiService, testMode: Bool) async throws -> [RemitNotice] {
-    let entries = try await concurrentMap(SofiaConstants.bmus(testMode: testMode)) { bmuId in
+func fetchActiveRemits(api: SofiaApiService) async throws -> [RemitNotice] {
+    let entries = try await concurrentMap(SofiaConstants.bmus) { bmuId in
         try await api.getRemits(bmuId: bmuId, eventStatus: "Active", limit: 100, offset: 0)
     }.flatMap { $0 }
     let notices = distinctRemits(entries).map(remitNotice(from:))
@@ -132,18 +130,17 @@ public struct SofiaMelRepository: Sendable {
     }
 
     /// `observeMel` : points en cache.
-    public func points(testMode: Bool) async -> [GraphPoint] {
-        await store.melPoints(testMode: testMode)
+    public func points() async -> [GraphPoint] {
+        await store.melPoints()
     }
 
-    public func refresh(testMode: Bool) async throws {
+    public func refresh() async throws {
         // Une seule série : la somme Sofia est calculée par le serveur
-        let entries = try await api.getMel(
-            testMode: testMode,
+        let entries = try await api.getMelTotal(
             timeFrom: ApiTime.format(SofiaConstants.historyStart),
             timeTo: ApiTime.format(Date())
         )
-        await store.refreshMelPoints(testMode: testMode, points: melGraphPoints(entries, testMode: testMode))
+        await store.refreshMelPoints(melGraphPoints(entries))
     }
 }
 
@@ -158,18 +155,17 @@ public struct SofiaContextRepository: Sendable {
         self.store = store
     }
 
-    public func uouDays(testMode: Bool) async -> [UouDay] {
-        await store.uouDays(testMode: testMode)
+    public func uouDays() async -> [UouDay] {
+        await store.uouDays()
     }
 
     public func gbContext() async -> GbContext? {
         await store.gbContext()
     }
 
-    public func refreshUou(testMode: Bool) async throws {
-        let entries = try await api.getUou(testMode: testMode)
-        let days = entries.map { UouDay(date: $0.forecastDate, outputUsableMw: $0.outputUsable) }
-        await store.refreshUouDays(testMode: testMode, days: days)
+    public func refreshUou() async throws {
+        let entries = try await api.getUouTotal()
+        await store.refreshUouDays(entries.map { UouDay(date: $0.forecastDate, outputUsableMw: $0.outputUsable) })
     }
 
     public func refreshGbContext() async throws {

@@ -5,7 +5,6 @@ import Foundation
 // MARK: - Modèles
 
 public struct LiveData: Codable, Sendable {
-    public let testMode: Bool
     /// MW (PN)
     public let committed: [GraphPoint]
     /// MW (B1610 MWh/30 min × 2)
@@ -14,8 +13,7 @@ public struct LiveData: Codable, Sendable {
     public let to: Date
     public var fromCache: Bool
 
-    public init(testMode: Bool, committed: [GraphPoint], actual: [GraphPoint], from: Date, to: Date, fromCache: Bool) {
-        self.testMode = testMode
+    public init(committed: [GraphPoint], actual: [GraphPoint], from: Date, to: Date, fromCache: Bool) {
         self.committed = committed
         self.actual = actual
         self.from = from
@@ -50,11 +48,7 @@ public struct UnitStatus: Codable, Hashable, Sendable {
     public var label: String { bmuId.removingPrefix("T_") }
 
     /// « T_SOFOW-11 » → « 11 »
-    public var shortLabel: String {
-        let parts = bmuId.split(separator: "-", omittingEmptySubsequences: false)
-        let afterDash = parts.last.map { String($0) } ?? bmuId
-        return afterDash.removingPrefix("T_")
-    }
+    public var shortLabel: String { unitNumber(bmuId) }
 
     public var fraction: Double {
         if let normal = normalMw, normal > 0, let available = availableMw {
@@ -73,13 +67,11 @@ public struct UnitStatus: Codable, Hashable, Sendable {
 
 /// Puissance utilisable prévue par jour (UOU2T14D), pour le widget « 14 prochains jours ».
 public struct NextDaysData: Codable, Sendable {
-    public let testMode: Bool
     public let days: [UouDay]
     public let fetchedAt: Date
     public var fromCache: Bool
 
-    public init(testMode: Bool, days: [UouDay], fetchedAt: Date, fromCache: Bool) {
-        self.testMode = testMode
+    public init(days: [UouDay], fetchedAt: Date, fromCache: Bool) {
         self.days = days
         self.fetchedAt = fetchedAt
         self.fromCache = fromCache
@@ -89,7 +81,6 @@ public struct NextDaysData: Codable, Sendable {
 /// Production annoncée de Sofia (PN) comparée à l'éolien de Grande-Bretagne (AGWS) sur la même
 /// demi-heure, la dernière publiée par AGWS.
 public struct GbShareData: Codable, Sendable {
-    public let testMode: Bool
     public let timeFrom: Date?
     public let sofiaMw: Double?
     public let offshoreMw: Double?
@@ -98,7 +89,6 @@ public struct GbShareData: Codable, Sendable {
     public var fromCache: Bool
 
     public init(
-        testMode: Bool,
         timeFrom: Date?,
         sofiaMw: Double?,
         offshoreMw: Double?,
@@ -106,7 +96,6 @@ public struct GbShareData: Codable, Sendable {
         fetchedAt: Date,
         fromCache: Bool
     ) {
-        self.testMode = testMode
         self.timeFrom = timeFrom
         self.sofiaMw = sofiaMw
         self.offshoreMw = offshoreMw
@@ -131,13 +120,11 @@ public struct GbShareData: Codable, Sendable {
 }
 
 public struct UnitsData: Codable, Sendable {
-    public let testMode: Bool
     public let units: [UnitStatus]
     public let fetchedAt: Date
     public var fromCache: Bool
 
-    public init(testMode: Bool, units: [UnitStatus], fetchedAt: Date, fromCache: Bool) {
-        self.testMode = testMode
+    public init(units: [UnitStatus], fetchedAt: Date, fromCache: Bool) {
         self.units = units
         self.fetchedAt = fetchedAt
         self.fromCache = fromCache
@@ -150,11 +137,9 @@ public struct UnitsData: Codable, Sendable {
 // MARK: - Disponibilité par unité
 
 /// Disponibilité par unité à l'instant `now` d'après les avis REMIT (sans avis → pleine capacité nominale).
-public func computeUnitStatuses(_ notices: [RemitNotice], testMode: Bool, now: Date) -> [UnitStatus] {
-    let bmus = SofiaConstants.bmus(testMode: testMode)
-    // En mode test (T_HEYM11) la capacité nominale d'une unité est inconnue sans avis.
-    let nominal: Double? = testMode ? nil : SofiaConstants.maxCapacityMw / Double(SofiaConstants.bmus.count)
-    return bmus.map { id in
+public func computeUnitStatuses(_ notices: [RemitNotice], now: Date) -> [UnitStatus] {
+    let nominal = SofiaConstants.maxCapacityMw / Double(SofiaConstants.bmus.count)
+    return SofiaConstants.bmus.map { id in
         let active = notices.filter { $0.bmuId == id && $0.isInEffect(at: now) }
         let normal = active.compactMap { $0.normalCapacityMw }.first ?? nominal
         let available = active.compactMap { $0.availableMw }.min() ?? normal
@@ -206,7 +191,6 @@ public enum SofiaWidgetData {
         api: SofiaApiService = .shared,
         store: SofiaLocalStore = .shared
     ) async -> LiveData {
-        let testMode = SofiaSettings.testMode
         let to = Date()
         let from = window.map { to.addingTimeInterval(-$0) } ?? SofiaConstants.historyStart
         let windowName = window.map { String(Int($0 / 60)) } ?? "all"
@@ -215,35 +199,32 @@ public enum SofiaWidgetData {
         let toString = ApiTime.format(to)
 
         let fresh: ([GraphPoint], [GraphPoint])? = try? await withTimeout(seconds: 30) {
-            async let committed = SofiaWidgetData.fetchCommitted(api: api, from: fromString, to: toString, testMode: testMode)
-            async let actual = SofiaWidgetData.fetchActual(include: includeActual, api: api, from: fromString, to: toString, testMode: testMode)
+            async let committed = SofiaWidgetData.fetchCommitted(api: api, from: fromString, to: toString)
+            async let actual = SofiaWidgetData.fetchActual(include: includeActual, api: api, from: fromString, to: toString)
             let committedPoints = try await committed
             let actualPoints = try await actual
             return (committedPoints, actualPoints)
         }
 
         if let fresh {
-            let data = LiveData(testMode: testMode, committed: fresh.0, actual: fresh.1, from: from, to: to, fromCache: false)
+            let data = LiveData(committed: fresh.0, actual: fresh.1, from: from, to: to, fromCache: false)
             SofiaWidgetSnapshots.saveLive(data, name: snapshotName)
             return data
         }
 
-        let committed = await store.productionPoints(testMode: testMode).filter { $0.timeFrom >= from }
+        let committed = await store.productionPoints().filter { $0.timeFrom >= from }
         let actual: [GraphPoint]
         if includeActual {
-            actual = await store.b1610Points(testMode: testMode)
+            actual = await store.b1610Points()
                 .filter { $0.timeFrom >= from }
                 .map { $0.with(quantity: $0.quantity * 2) }
         } else {
             actual = []
         }
-        let cached = LiveData(testMode: testMode, committed: committed, actual: actual, from: from, to: to, fromCache: true)
+        let cached = LiveData(committed: committed, actual: actual, from: from, to: to, fromCache: true)
         // Cache vide/périmé (app pas ouverte depuis longtemps) → dernier snapshot du widget
         if !committed.isEmpty { return cached }
-        if let snapshot = SofiaWidgetSnapshots.loadLive(name: snapshotName), snapshot.testMode == testMode {
-            return snapshot
-        }
-        return cached
+        return SofiaWidgetSnapshots.loadLive(name: snapshotName) ?? cached
     }
 
     /// Disponibilité par unité d'après les avis REMIT actifs (sans avis → pleine capacité nominale).
@@ -251,14 +232,13 @@ public enum SofiaWidgetData {
         api: SofiaApiService = .shared,
         store: SofiaLocalStore = .shared
     ) async -> UnitsData {
-        let testMode = SofiaSettings.testMode
         let now = Date()
 
         let fresh: [RemitNotice]? = try? await withTimeout(seconds: 20) {
-            try await fetchActiveRemits(api: api, testMode: testMode)
+            try await fetchActiveRemits(api: api)
         }
 
-        if fresh == nil, let snapshot = SofiaWidgetSnapshots.loadUnits(), snapshot.testMode == testMode {
+        if fresh == nil, let snapshot = SofiaWidgetSnapshots.loadUnits() {
             return snapshot
         }
 
@@ -266,11 +246,10 @@ public enum SofiaWidgetData {
         if let fresh {
             notices = fresh
         } else {
-            notices = await store.remitNotices(testMode: testMode)
+            notices = await store.remitNotices()
         }
         let data = UnitsData(
-            testMode: testMode,
-            units: computeUnitStatuses(notices, testMode: testMode, now: now),
+            units: computeUnitStatuses(notices, now: now),
             fetchedAt: now,
             fromCache: fresh == nil
         )
@@ -285,24 +264,23 @@ public enum SofiaWidgetData {
         api: SofiaApiService = .shared,
         store: SofiaLocalStore = .shared
     ) async -> NextDaysData {
-        let testMode = SofiaSettings.testMode
         let now = Date()
 
         let fresh: [UouDay]? = try? await withTimeout(seconds: 20) {
-            try await api.getUou(testMode: testMode)
+            try await api.getUouTotal()
                 .map { UouDay(date: $0.forecastDate, outputUsableMw: $0.outputUsable) }
         }
 
         if let fresh {
-            let data = NextDaysData(testMode: testMode, days: fresh, fetchedAt: now, fromCache: false)
+            let data = NextDaysData(days: fresh, fetchedAt: now, fromCache: false)
             SofiaWidgetSnapshots.saveNextDays(data)
             return data
         }
-        if let snapshot = SofiaWidgetSnapshots.loadNextDays(), snapshot.testMode == testMode {
+        if let snapshot = SofiaWidgetSnapshots.loadNextDays() {
             return snapshot
         }
-        let cached = await store.uouDays(testMode: testMode)
-        return NextDaysData(testMode: testMode, days: cached, fetchedAt: now, fromCache: true)
+        let cached = await store.uouDays()
+        return NextDaysData(days: cached, fetchedAt: now, fromCache: true)
     }
 
     /// Dernière demi-heure AGWS et PN de Sofia sur la même demi-heure (le B1610 arrive trop tard).
@@ -311,7 +289,6 @@ public enum SofiaWidgetData {
         api: SofiaApiService = .shared,
         store: SofiaLocalStore = .shared
     ) async -> GbShareData {
-        let testMode = SofiaSettings.testMode
         let now = Date()
 
         let fresh: GbShareData? = try? await withTimeout(seconds: 20) {
@@ -319,16 +296,14 @@ public enum SofiaWidgetData {
             let timeFrom = ApiTime.parseInstant(gb.timeFrom)
             var sofiaMw: Double? = nil
             if let timeFrom {
-                let entries = try await api.getProduction(
-                    testMode: testMode,
+                let entries = try await api.getProductionTotal(
                     timeFrom: ApiTime.format(timeFrom),
                     timeTo: ApiTime.format(timeFrom.addingTimeInterval(30 * 60))
                 )
-                sofiaMw = aggregateProduction(entries, testMode: testMode)
+                sofiaMw = aggregateProduction(entries)
                     .first(where: { $0.timeFrom == timeFrom })?.quantity
             }
             return GbShareData(
-                testMode: testMode,
                 timeFrom: timeFrom,
                 sofiaMw: sofiaMw,
                 offshoreMw: gb.windOffshoreMw,
@@ -342,17 +317,16 @@ public enum SofiaWidgetData {
             SofiaWidgetSnapshots.saveGbShare(fresh)
             return fresh
         }
-        if let snapshot = SofiaWidgetSnapshots.loadGbShare(), snapshot.testMode == testMode {
+        if let snapshot = SofiaWidgetSnapshots.loadGbShare() {
             return snapshot
         }
         let gb = await store.gbContext()
         var sofiaMw: Double? = nil
         if let gb {
-            let points = await store.productionPoints(testMode: testMode)
+            let points = await store.productionPoints()
             sofiaMw = points.last(where: { $0.timeFrom == gb.timeFrom })?.quantity
         }
         return GbShareData(
-            testMode: testMode,
             timeFrom: gb?.timeFrom,
             sofiaMw: sofiaMw,
             offshoreMw: gb?.windOffshoreMw,
@@ -362,15 +336,10 @@ public enum SofiaWidgetData {
         )
     }
 
-    /// Somme Sofia calculée par le serveur (ou unité de test) : une requête.
-    private static func fetchCommitted(
-        api: SofiaApiService,
-        from: String,
-        to: String,
-        testMode: Bool
-    ) async throws -> [GraphPoint] {
-        let entries = try await api.getProduction(testMode: testMode, timeFrom: from, timeTo: to)
-        return aggregateProduction(entries, testMode: testMode)
+    /// Somme Sofia calculée par le serveur : une requête.
+    private static func fetchCommitted(api: SofiaApiService, from: String, to: String) async throws -> [GraphPoint] {
+        let entries = try await api.getProductionTotal(timeFrom: from, timeTo: to)
+        return aggregateProduction(entries)
     }
 
     /// B1610 en MW (MWh par demi-heure × 2) ; rien n'est chargé si `include` est faux.
@@ -378,12 +347,11 @@ public enum SofiaWidgetData {
         include: Bool,
         api: SofiaApiService,
         from: String,
-        to: String,
-        testMode: Bool
+        to: String
     ) async throws -> [GraphPoint] {
         guard include else { return [] }
-        let entries = try await api.getB1610(testMode: testMode, timeFrom: from, timeTo: to)
-        return aggregateB1610(entries, testMode: testMode)
+        let entries = try await api.getB1610Total(timeFrom: from, timeTo: to)
+        return aggregateB1610(entries)
             .map { $0.with(quantity: $0.quantity * 2) }
     }
 }

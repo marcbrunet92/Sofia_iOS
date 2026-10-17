@@ -7,13 +7,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AGWS · %1$@"
+            "value" : "Data from %1$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AGWS · %1$@"
+            "value" : "Données de %1$@"
           }
         }
       }
@@ -568,13 +568,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia's announced output compared to offshore wind across Great Britain (AGWS)"
+            "value" : "Sofia's announced output compared to offshore wind across Great Britain"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Production annoncée de Sofia comparée à l'éolien en mer de Grande-Bretagne (AGWS)"
+            "value" : "Production annoncée de Sofia comparée à l'éolien en mer de Grande-Bretagne"
           }
         }
       }
@@ -687,13 +687,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia (PN) %1$@ MW"
+            "value" : "Sofia %1$@ MW"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia (PN) %1$@ MW"
+            "value" : "Sofia %1$@ MW"
           }
         }
       }
@@ -1095,13 +1095,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Planned availability for each of the next 14 days (UOU2T14D)"
+            "value" : "Planned availability for each of the next 14 days"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disponibilité prévue pour chacun des 14 prochains jours (UOU2T14D)"
+            "value" : "Disponibilité prévue pour chacun des 14 prochains jours"
           }
         }
       }
@@ -1248,13 +1248,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "REMIT availability of each unit"
+            "value" : "Availability of each unit"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disponibilité REMIT de chaque unité"
+            "value" : "Disponibilité de chaque unité"
           }
         }
       }

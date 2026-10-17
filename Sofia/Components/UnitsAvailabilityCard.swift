@@ -2,27 +2,30 @@ import Foundation
 import SwiftUI
 import SofiaCore
 
-/// UnitsAvailabilityCard.kt : même contenu que le widget « disponibilité par unité » (format large),
-/// disponibilité REMIT par unité + total.
+/// UnitsAvailabilityCard.kt : puissance disponible maintenant, total du parc puis une jauge par unité.
 struct UnitsAvailabilityCard: View {
     let data: UnitsData
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center) {
-                Text("widget_units_header")
-                    .font(SofiaType.labelMedium)
-                    .fontWeight(.bold)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("remit_available_now")
+                    .font(SofiaType.labelLarge)
                     .foregroundStyle(SofiaColors.onSurfaceVariant)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text(totalText)
-                    .font(SofiaType.titleSmall)
-                    .fontWeight(.bold)
-                    .foregroundStyle(SofiaColors.onSurface)
+                HStack(alignment: .lastTextBaseline, spacing: 6) {
+                    Text(verbatim: L10n.format("mw_value_format", Int(data.totalAvailable.rounded())))
+                        .font(SofiaType.headlineMedium)
+                        .fontWeight(.bold)
+                    if data.totalNormal > 0 {
+                        Text(verbatim: L10n.format("remit_out_of_format", Int(data.totalNormal.rounded())))
+                            .font(SofiaType.bodyLarge)
+                            .foregroundStyle(SofiaColors.onSurfaceVariant)
+                    }
+                }
             }
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
                 ForEach(data.units, id: \.bmuId) { unit in
-                    UnitTile(unit: unit)
+                    UnitGauge(unit: unit)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -30,49 +33,24 @@ struct UnitsAvailabilityCard: View {
         .padding(16)
         .sofiaCard()
     }
-
-    private var totalText: String {
-        let available = Int(data.totalAvailable.rounded())
-        if data.totalNormal > 0 {
-            return "\(available) / \(Int(data.totalNormal.rounded())) MW"
-        }
-        return "\(available) MW"
-    }
 }
 
-private struct UnitTile: View {
+private struct UnitGauge: View {
     let unit: UnitStatus
 
     var body: some View {
-        let color = unit.level.color
-        VStack(spacing: 0) {
-            HStack(spacing: 4) {
-                Circle()
-                    .fill(color)
-                    .frame(width: 6, height: 6)
-                Text(unit.label)
-                    .font(SofiaType.labelSmall)
-                    .fontWeight(.bold)
-                    .foregroundStyle(SofiaColors.onSurfaceVariant)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            Text(unit.availableMw.map { String(Int($0.rounded())) } ?? "—")
-                .font(SofiaType.titleLarge)
-                .fontWeight(.bold)
-                .foregroundStyle(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text("unit_mw")
-                .font(SofiaType.labelSmall)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: L10n.format("remit_unit_format", unit.shortLabel))
+                .font(SofiaType.labelMedium)
                 .foregroundStyle(SofiaColors.onSurfaceVariant)
-            Spacer().frame(height: 6)
-            LinearProgressBar(fraction: unit.fraction, color: color)
+                .lineLimit(1)
+            LinearProgressBar(fraction: unit.fraction, color: unit.level.color)
+            Text(verbatim: unit.availableMw.map { L10n.format("mw_value_format", Int($0.rounded())) } ?? "—")
+                .font(SofiaType.labelLarge)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(SofiaColors.surfaceContainer, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

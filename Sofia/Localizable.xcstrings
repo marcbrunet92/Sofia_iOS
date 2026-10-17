@@ -262,13 +262,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Available (MEL)"
+            "value" : "Available capacity"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disponible (MEL)"
+            "value" : "Capacité disponible"
           }
         }
       }
@@ -381,13 +381,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unable to refresh REMIT data."
+            "value" : "Unable to refresh alerts."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Impossible d'actualiser les données REMIT."
+            "value" : "Impossible d'actualiser les alertes."
           }
         }
       }
@@ -511,36 +511,19 @@
         }
       }
     },
-    "gb_share_caption" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PN ÷ offshore"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PN ÷ éolien en mer"
-          }
-        }
-      }
-    },
     "gb_share_label" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia share"
+            "value" : "Sofia share in GB wind production"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Part de Sofia"
+            "value" : "Part de Sofia dans l'énergie éolienne du Royaume-Uni"
           }
         }
       }
@@ -551,13 +534,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AGWS · %1$@"
+            "value" : "Data from %1$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AGWS · %1$@"
+            "value" : "Données de %1$@"
           }
         }
       }
@@ -619,13 +602,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Planned availability · UOU2T14D"
+            "value" : "Planned availability"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disponibilité prévue · UOU2T14D"
+            "value" : "Disponibilité prévue"
           }
         }
       }
@@ -647,66 +630,19 @@
         }
       }
     },
-    "remit_active_notices %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld active notice"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld active notices"
-                }
-              }
-            }
-          }
-        },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld avis actif"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld avis actifs"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld avis actifs"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "remit_all_units_format" : {
+    "remit_all_units" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All %1$ld units"
+            "value" : "All units"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les %1$ld unités"
+            "value" : "Toutes les unités"
           }
         }
       }
@@ -724,6 +660,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$ld MW disponibles"
+          }
+        }
+      }
+    },
+    "remit_available_now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available now"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disponible maintenant"
           }
         }
       }
@@ -762,189 +715,19 @@
         }
       }
     },
-    "remit_capacity_available" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Available"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponible"
-          }
-        }
-      }
-    },
-    "remit_capacity_normal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Normal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Normale"
-          }
-        }
-      }
-    },
-    "remit_capacity_unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unavailable"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Indisponible"
-          }
-        }
-      }
-    },
-    "remit_cause_format" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cause: %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cause : %1$@"
-          }
-        }
-      }
-    },
-    "remit_detail_asset" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Asset"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actif"
-          }
-        }
-      }
-    },
-    "remit_detail_asset_section" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Asset"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actif"
-          }
-        }
-      }
-    },
     "remit_detail_available" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Available"
+            "value" : "Capacity"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disponible"
-          }
-        }
-      }
-    },
-    "remit_detail_bmu" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BMU"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BMU"
-          }
-        }
-      }
-    },
-    "remit_detail_capacities" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacities"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacités"
-          }
-        }
-      }
-    },
-    "remit_detail_cause" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cause"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cause"
-          }
-        }
-      }
-    },
-    "remit_detail_dates" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dates"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dates"
+            "value" : "Capacité"
           }
         }
       }
@@ -966,91 +749,6 @@
         }
       }
     },
-    "remit_detail_mrid" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MRID"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MRID"
-          }
-        }
-      }
-    },
-    "remit_detail_normal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Normal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Normale"
-          }
-        }
-      }
-    },
-    "remit_detail_outage_profile" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Outage profile"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil d'indisponibilité"
-          }
-        }
-      }
-    },
-    "remit_detail_participant" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Participant"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Participant"
-          }
-        }
-      }
-    },
-    "remit_detail_published" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Published"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Publié"
-          }
-        }
-      }
-    },
     "remit_detail_related_info" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1068,23 +766,6 @@
         }
       }
     },
-    "remit_detail_revision" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revision"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Révision"
-          }
-        }
-      }
-    },
     "remit_detail_start" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1098,40 +779,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Début"
-          }
-        }
-      }
-    },
-    "remit_end_format" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End: %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fin : %1$@"
-          }
-        }
-      }
-    },
-    "remit_hide_units" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide units"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masquer les unités"
           }
         }
       }
@@ -1236,30 +883,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Updated: %1$@"
+            "value" : "Updated at %1$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mis à jour : %1$@"
+            "value" : "Mis à jour à %1$@"
           }
         }
       }
     },
-    "remit_no_active_notices" : {
+    "remit_no_alerts" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No active REMIT notices."
+            "value" : "No active alerts"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucun avis REMIT actif."
+            "value" : "Aucune alerte en cours"
           }
         }
       }
@@ -1270,30 +917,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No end date"
+            "value" : "no end date"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sans date de fin"
+            "value" : "sans date de fin"
           }
         }
       }
     },
-    "remit_notices_title" : {
+    "remit_out_of_format" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notices"
+            "value" : "of %1$ld MW"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Avis"
+            "value" : "sur %1$ld MW"
           }
         }
       }
@@ -1304,13 +951,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Available capacity (MW) over time"
+            "value" : "Available capacity over time"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Capacité disponible (MW) au fil du temps"
+            "value" : "Capacité disponible au fil du temps"
           }
         }
       }
@@ -1349,19 +996,19 @@
         }
       }
     },
-    "remit_published_format" : {
+    "remit_section_current" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Published: %1$@"
+            "value" : "Ongoing"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Publié : %1$@"
+            "value" : "En cours"
           }
         }
       }
@@ -1383,53 +1030,19 @@
         }
       }
     },
-    "remit_show_units" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show units"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher les unités"
-          }
-        }
-      }
-    },
     "remit_starts_format" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Starts %1$@"
+            "value" : "starts %1$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Début %1$@"
-          }
-        }
-      }
-    },
-    "remit_test_mode_info" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TEST MODE — T_HEYM11 only."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MODE TEST — T_HEYM11 uniquement."
+            "value" : "début %1$@"
           }
         }
       }
@@ -1491,13 +1104,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Until %1$@"
+            "value" : "until %1$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jusqu'au %1$@"
+            "value" : "jusqu'au %1$@"
           }
         }
       }
@@ -2080,19 +1693,36 @@
         }
       }
     },
+    "timestamp_today_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today, %1$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd'hui, %1$@"
+          }
+        }
+      }
+    },
     "title_graph" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Graph"
+            "value" : "Sofia Generation"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Graphique"
+            "value" : "Puissance délivrée par Sofia"
           }
         }
       }

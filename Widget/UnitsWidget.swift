@@ -40,8 +40,7 @@ struct UnitsProvider: TimelineProvider {
     static func placeholderData() -> UnitsData {
         let now = Date()
         return UnitsData(
-            testMode: false,
-            units: computeUnitStatuses([], testMode: false, now: now),
+            units: computeUnitStatuses([], now: now),
             fetchedAt: now,
             fromCache: false
         )

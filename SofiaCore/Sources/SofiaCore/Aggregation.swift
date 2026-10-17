@@ -9,11 +9,10 @@ private struct SettlementKey: Hashable {
     let settlementPeriod: Int
 }
 
-/// Somme les BMU par période de règlement pour obtenir le total Sofia (ou T_HEYM11 en mode test).
-public func aggregateProduction(_ entries: [PnEntryDto], testMode: Bool) -> [GraphPoint] {
+/// Somme les BMU par période de règlement pour obtenir le total Sofia.
+public func aggregateProduction(_ entries: [PnEntryDto]) -> [GraphPoint] {
     aggregate(
         entries,
-        testMode: testMode,
         key: { SettlementKey(timeFrom: $0.timeFrom, timeTo: $0.timeTo, settlementPeriod: $0.settlementPeriod) },
         timeFrom: { $0.timeFrom },
         timeTo: { $0.timeTo },
@@ -22,10 +21,9 @@ public func aggregateProduction(_ entries: [PnEntryDto], testMode: Bool) -> [Gra
 }
 
 /// Même agrégation pour la production réelle (B1610, MWh par demi-heure).
-public func aggregateB1610(_ entries: [B1610EntryDto], testMode: Bool) -> [GraphPoint] {
+public func aggregateB1610(_ entries: [B1610EntryDto]) -> [GraphPoint] {
     aggregate(
         entries,
-        testMode: testMode,
         key: { SettlementKey(timeFrom: $0.timeFrom, timeTo: $0.timeTo, settlementPeriod: $0.settlementPeriod) },
         timeFrom: { $0.timeFrom },
         timeTo: { $0.timeTo },
@@ -35,14 +33,13 @@ public func aggregateB1610(_ entries: [B1610EntryDto], testMode: Bool) -> [Graph
 
 private func aggregate<Entry>(
     _ entries: [Entry],
-    testMode: Bool,
     key: (Entry) -> SettlementKey,
     timeFrom: (Entry) -> String,
     timeTo: (Entry) -> String,
     quantity: (Entry) -> Double
 ) -> [GraphPoint] {
     if entries.isEmpty { return [] }
-    let seriesId = testMode ? SofiaConstants.testBmu : "SOFIA_TOTAL"
+    let seriesId = "SOFIA_TOTAL"
     var order: [SettlementKey] = []
     var groups: [SettlementKey: [Entry]] = [:]
     for entry in entries {
@@ -76,9 +73,9 @@ public func weatherGraphPoints(_ entries: [WeatherEntryDto]) -> [GraphPoint] {
     .sorted { $0.timeFrom < $1.timeFrom }
 }
 
-/// `List<MelEntryDto>.toMelPoints()` : une série déjà sommée par le serveur (ou l'unité de test).
-public func melGraphPoints(_ entries: [MelEntryDto], testMode: Bool) -> [GraphPoint] {
-    let seriesId = testMode ? SofiaConstants.testBmu : "SOFIA_TOTAL"
+/// `List<MelEntryDto>.toMelPoints()` : une série déjà sommée par le serveur.
+public func melGraphPoints(_ entries: [MelEntryDto]) -> [GraphPoint] {
+    let seriesId = "SOFIA_TOTAL"
     return entries.compactMap { dto -> GraphPoint? in
         guard let from = ApiTime.parseUtc(dto.timeFrom), let to = ApiTime.parseUtc(dto.timeTo) else { return nil }
         return GraphPoint(id: seriesId, timeFrom: from, timeTo: to, quantity: dto.levelMw)

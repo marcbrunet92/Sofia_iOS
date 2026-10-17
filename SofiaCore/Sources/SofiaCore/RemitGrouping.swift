@@ -17,6 +17,8 @@ public struct RemitGroup: Identifiable, Sendable {
 
     public var first: RemitNotice { notices[0] }
 
+    public var title: String { first.cause.ifBlank(first.messageHeading.ifBlank(first.eventType)) }
+
     public var start: Date? { notices.compactMap(\.eventStartTime).min() }
 
     public var end: Date? {
@@ -46,6 +48,29 @@ extension RemitNotice {
         if let availableCapacityMw { return availableCapacityMw }
         if let normal = normalCapacityMw, let unavailable = unavailableCapacityMw { return normal - unavailable }
         return nil
+    }
+}
+
+/// « T_SOFOW-11 » → « 11 ».
+public func unitNumber(_ bmuId: String) -> String {
+    let afterDash = bmuId.split(separator: "-", omittingEmptySubsequences: false).last.map(String.init) ?? bmuId
+    return afterDash.removingPrefix("T_")
+}
+
+extension RemitGroup {
+    /// Profil de capacité du groupe : somme des profils de chaque unité, palier par palier.
+    /// Vide si une unité n'a pas de profil.
+    public func outageProfile() -> [OutageStep] {
+        let profiles = notices.map { parseOutageProfile($0.outageProfile) }
+        if profiles.isEmpty || profiles.contains(where: \.isEmpty) { return [] }
+        if profiles.count == 1 { return profiles[0] }
+        let bounds = Set(profiles.flatMap { steps in steps.flatMap { [$0.start, $0.end] } }).sorted()
+        return zip(bounds, bounds.dropFirst()).compactMap { from, to in
+            let capacities = profiles.map { steps in
+                steps.first { $0.start <= from && $0.end > from }?.capacityMw
+            }
+            return sumOrNil(capacities).map { OutageStep(start: from, end: to, capacityMw: $0) }
+        }
     }
 }
 

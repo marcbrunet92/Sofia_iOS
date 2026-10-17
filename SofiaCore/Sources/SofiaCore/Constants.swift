@@ -3,20 +3,13 @@ import Foundation
 /// Équivalent de Constants.kt (Android).
 public enum SofiaConstants {
     public static let baseURL = "https://sofia.lemarc.fr/"
-    public static let testBmu = "T_HEYM11"
     public static let maxCapacityMw: Double = 1400.0
     public static let bmus = ["T_SOFOW-11", "T_SOFOW-12", "T_SOFOW-21", "T_SOFOW-22"]
     /// 2026-04-01T00:00:00Z
     public static let historyStart = Date(timeIntervalSince1970: 1_775_001_600)
 
-    /// Clé de préférence du mode test (même nom que la clé DataStore Android).
-    public static let testModeKey = "test_mode"
-    /// App Group optionnel : s'il est activé sur l'app ET le widget, ils partagent réglages et cache.
+    /// App Group optionnel : s'il est activé sur l'app ET le widget, ils partagent le cache.
     public static let appGroupIdentifier = "group.com.lemarc.Sofia"
-
-    public static func bmus(testMode: Bool) -> [String] {
-        testMode ? [testBmu] : bmus
-    }
 }
 
 public enum TimeWindow: String, CaseIterable, Codable, Sendable {

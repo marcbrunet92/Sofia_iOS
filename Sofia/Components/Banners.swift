@@ -67,38 +67,3 @@ struct WarningBanner: View {
             .sofiaCard(SofiaColors.yellow)
     }
 }
-
-/// InfoCard.kt
-struct InfoCard: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(SofiaType.bodyMedium)
-            .foregroundStyle(SofiaColors.onSurface)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .sofiaCard()
-    }
-}
-
-/// Capacity Text.kt
-struct CapacityText: View {
-    let label: String
-    let valueMw: Double?
-
-    var body: some View {
-        Text(L10n.format("capacity_format", label, valueMw.map { String(Int($0.rounded())) } ?? "—"))
-            .font(SofiaType.bodySmall)
-    }
-}
-
-/// HorizontalDivider Material 3.
-struct SofiaDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(SofiaColors.outlineVariant)
-            .frame(height: 1)
-            .frame(maxWidth: .infinity)
-    }
-}

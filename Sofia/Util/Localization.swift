@@ -12,23 +12,7 @@ enum L10n {
     }
 }
 
-/// `formatTimestamp` (RemitScreen.kt) : « yyyy-MM-dd HH:mm » dans le fuseau de l'appareil, « — » si absent.
-enum SofiaDateFormat {
-    private static let timestampFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.autoupdatingCurrent
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter
-    }()
-
-    static func timestamp(_ date: Date?) -> String {
-        guard let date else { return "—" }
-        return timestampFormatter.string(from: date)
-    }
-}
-
-/// Une annulation (nouveau rafraîchissement, changement de mode) n'est pas une erreur à afficher.
+/// Une annulation (nouveau rafraîchissement) n'est pas une erreur à afficher.
 func isCancellation(_ error: Error) -> Bool {
     if error is CancellationError { return true }
     if let urlError = error as? URLError, urlError.code == .cancelled { return true }

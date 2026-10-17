@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import Observation
 import SofiaCore
@@ -24,13 +23,13 @@ struct GraphUiState {
     var isRefreshing = false
     var selectedWindow: TimeWindow = .all
     /// Ordre d'insertion conservé, comme le `Set` (LinkedHashSet) Kotlin.
-    var selectedDatasets: [GraphDataset] = [.pn, .mel]
+    var selectedDatasets: [GraphDataset] = [.pn]
     // Données brutes
     /// MW
     var pnPoints: [GraphPoint] = []
     /// MWh par 30 min
     var b1610PointsMwh: [GraphPoint] = []
-    /// Vitesse du vent telle que renvoyée par l'API
+    /// km/h, tels que renvoyés par l'API
     var weatherPoints: [GraphPoint] = []
     /// MW
     var melPoints: [GraphPoint] = []
@@ -41,7 +40,6 @@ struct GraphUiState {
     var latestDataTimestamp: Date?
     var lastFetchTimestamp: Date?
     var errorMessageKey: String?
-    var testMode = false
 
     var hasData: Bool {
         !pnPoints.isEmpty || !b1610PointsMwh.isEmpty || !weatherPoints.isEmpty
@@ -62,15 +60,13 @@ final class GraphViewModel {
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var observeTask: Task<Void, Never>?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
-    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     init(
         productionRepository: SofiaProductionRepository,
         b1610Repository: SofiaB1610Repository,
         weatherRepository: SofiaWeatherRepository,
         melRepository: SofiaMelRepository,
-        contextRepository: SofiaContextRepository,
-        settingsRepository: SettingsRepository
+        contextRepository: SofiaContextRepository
     ) {
         self.productionRepository = productionRepository
         self.b1610Repository = b1610Repository
@@ -78,11 +74,8 @@ final class GraphViewModel {
         self.melRepository = melRepository
         self.contextRepository = contextRepository
 
-        settingsRepository.testMode
-            .sink { [weak self] enabled in
-                self?.onTestModeChanged(enabled)
-            }
-            .store(in: &cancellables)
+        startObserving()
+        refresh(forceLoading: !uiState.hasData)
 
         // Rafraîchissement automatique toutes les 60 s
         pollingTask = Task { [weak self] in
@@ -94,32 +87,26 @@ final class GraphViewModel {
         }
     }
 
-    private func onTestModeChanged(_ enabled: Bool) {
-        uiState.testMode = enabled
-        startObserving(testMode: enabled)
-        refresh(forceLoading: !uiState.hasData)
-    }
-
     /// Équivalent de la collecte des Flow Room : publie le contenu du cache local.
-    private func startObserving(testMode: Bool) {
+    private func startObserving() {
         observeTask?.cancel()
         observeTask = Task<Void, Never> { [weak self] in
             guard let self else { return }
-            await self.reloadFromStore(testMode: testMode)
+            await self.reloadFromStore()
         }
     }
 
-    private func reloadFromStore(testMode: Bool) async {
+    private func reloadFromStore() async {
         let production = productionRepository
         let actual = b1610Repository
         let weather = weatherRepository
         let mel = melRepository
         let context = contextRepository
-        async let pnSnapshot = production.snapshot(testMode: testMode)
-        async let b1610Snapshot = actual.snapshot(testMode: testMode)
+        async let pnSnapshot = production.snapshot()
+        async let b1610Snapshot = actual.snapshot()
         async let weatherSnapshot = weather.snapshot()
-        async let melPoints = mel.points(testMode: testMode)
-        async let uouDays = context.uouDays(testMode: testMode)
+        async let melPoints = mel.points()
+        async let uouDays = context.uouDays()
         async let gbContext = context.gbContext()
         let pn = await pnSnapshot
         let b1610 = await b1610Snapshot
@@ -127,7 +114,7 @@ final class GraphViewModel {
         let melValues = await melPoints
         let uouValues = await uouDays
         let gbValue = await gbContext
-        guard !Task.isCancelled, uiState.testMode == testMode else { return }
+        guard !Task.isCancelled else { return }
 
         let latest = [pn.latestDataTimestamp, b1610.latestDataTimestamp, wind.latestDataTimestamp]
             .compactMap { $0 }
@@ -179,7 +166,6 @@ final class GraphViewModel {
         state.errorMessageKey = nil
         uiState = state
 
-        let testMode = uiState.testMode
         let production = productionRepository
         let actual = b1610Repository
         let weather = weatherRepository
@@ -187,11 +173,11 @@ final class GraphViewModel {
         let context = contextRepository
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await production.refresh(testMode: testMode) }
-                group.addTask { try await actual.refresh(testMode: testMode) }
+                group.addTask { try await production.refresh() }
+                group.addTask { try await actual.refresh() }
                 group.addTask { try await weather.refresh() }
-                group.addTask { try await mel.refresh(testMode: testMode) }
-                group.addTask { try await context.refreshUou(testMode: testMode) }
+                group.addTask { try await mel.refresh() }
+                group.addTask { try await context.refreshUou() }
                 group.addTask { try await context.refreshGbContext() }
                 try await group.waitForAll()
             }
@@ -209,7 +195,7 @@ final class GraphViewModel {
             uiState = failed
         }
         // Les tables mises à jour sont republiées, comme les émissions Room
-        await reloadFromStore(testMode: testMode)
+        await reloadFromStore()
     }
 
     func dismissError() {

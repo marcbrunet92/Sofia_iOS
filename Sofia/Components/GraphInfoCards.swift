@@ -95,7 +95,7 @@ struct NextDaysCard: View {
     }
 }
 
-/// Contexte national (AGWS) : éolien en mer de Grande-Bretagne et part de Sofia (PN ÷ éolien en mer).
+/// Contexte national (AGWS) : part de Sofia dans l'éolien GB (PN ÷ éolien en mer + terrestre), en pourcentage.
 struct GbContextCard: View {
     let context: GbContext?
     let pnPoints: [GraphPoint]
@@ -104,105 +104,21 @@ struct GbContextCard: View {
         InfoCardContainer {
             CardTitle(titleKey: "gb_context_title")
             if let context {
-                let offshore = context.windOffshoreMw
+                let wind = context.windOffshoreMw.map { $0 + (context.windOnshoreMw ?? 0) }
                 let sofiaMw = pnPoints.last { $0.timeFrom == context.timeFrom }?.quantity
                 let share: Double? = {
-                    guard let offshore, offshore > 0, let sofiaMw else { return nil }
-                    return sofiaMw / offshore * 100
+                    guard let wind, wind > 0, let sofiaMw else { return nil }
+                    return sofiaMw / wind * 100
                 }()
-                HStack(spacing: 8) {
-                    StatTile(
-                        label: L10n.string("gb_offshore_label"),
-                        value: offshore.map { L10n.format("gb_gw_format", Self.gigawatts($0)) } ?? "—",
-                        caption: L10n.format("gb_source_format", Self.time(context.timeFrom))
-                    )
-                    StatTile(
-                        label: L10n.string("gb_share_label"),
-                        value: share.map { String(format: "%.1f %%", locale: Locale.current, $0) } ?? "—",
-                        caption: L10n.string("gb_share_caption")
-                    )
-                }
-                Text(verbatim: L10n.format(
-                    "gb_others_format",
-                    context.windOnshoreMw.map(Self.gigawatts) ?? "—",
-                    context.solarMw.map(Self.gigawatts) ?? "—"
-                ))
-                .font(SofiaType.bodySmall)
-                .foregroundStyle(SofiaColors.onSurfaceVariant)
+                Text(verbatim: share.map { String(format: "%.1f %%", locale: Locale.current, $0) } ?? "—")
+                    .font(SofiaType.headlineMedium)
+                Text("gb_share_label")
+                    .font(SofiaType.bodySmall)
+                    .foregroundStyle(SofiaColors.onSurfaceVariant)
             } else {
                 Text("gb_empty")
                     .font(SofiaType.bodyMedium)
                     .foregroundStyle(SofiaColors.onSurfaceVariant)
-            }
-        }
-    }
-
-    private static func gigawatts(_ mw: Double) -> String {
-        String(format: "%.1f", locale: Locale.current, mw / 1_000)
-    }
-
-    /// « HH:mm » aujourd'hui, « dd/MM HH:mm » sinon, dans le fuseau de l'appareil.
-    private static func time(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = TimeZone.autoupdatingCurrent
-        formatter.dateFormat = Calendar.current.isDateInToday(date) ? "HH:mm" : "dd/MM HH:mm"
-        return formatter.string(from: date)
-    }
-}
-
-private struct StatTile: View {
-    let label: String
-    let value: String
-    let caption: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: label)
-                .font(SofiaType.labelSmall)
-                .foregroundStyle(SofiaColors.onSurfaceVariant)
-            Text(verbatim: value)
-                .font(SofiaType.titleLarge)
-                .fontWeight(.medium)
-            Text(verbatim: caption)
-                .font(SofiaType.labelSmall)
-                .foregroundStyle(SofiaColors.onSurfaceVariant)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
-        .background(SofiaColors.surfaceContainer, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-}
-
-/// Rôle de chaque jeu de données, en une phrase.
-struct DatasetsInfoCard: View {
-    private struct Row: Hashable {
-        let name: String
-        let key: String
-    }
-
-    private static let rows: [Row] = [
-        Row(name: "PN", key: "data_info_pn"),
-        Row(name: "B1610", key: "data_info_b1610"),
-        Row(name: "MEL", key: "data_info_mel"),
-        Row(name: "UOU2T14D", key: "data_info_uou"),
-        Row(name: "AGWS", key: "data_info_agws"),
-        Row(name: "REMIT", key: "data_info_remit"),
-        Row(name: "Open-Meteo", key: "data_info_wind"),
-    ]
-
-    var body: some View {
-        InfoCardContainer {
-            CardTitle(titleKey: "data_info_title")
-            ForEach(Self.rows, id: \.name) { row in
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(verbatim: row.name)
-                        .font(SofiaType.labelLarge)
-                        .fontWeight(.bold)
-                    Text(LocalizedStringKey(row.key))
-                        .font(SofiaType.bodySmall)
-                        .foregroundStyle(SofiaColors.onSurfaceVariant)
-                }
             }
         }
     }

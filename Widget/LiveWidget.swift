@@ -91,9 +91,6 @@ private struct LiveCompactLayout: View {
             VStack(spacing: 0) {
                 WText(String(Int(data.currentMw.rounded())), 22, bold: true)
                 WText(L10n.string("widget_live_mw"), 11, WidgetPalette.muted)
-                if data.testMode {
-                    WText(L10n.string("widget_live_test"), 9, WidgetPalette.bad, bold: true)
-                }
             }
             .multilineTextAlignment(.center)
         }
@@ -114,12 +111,7 @@ private struct LiveWideLayout: View {
             .frame(width: 92, height: 92)
 
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    WText(L10n.string("widget_live_sofia_offshore"), 10, WidgetPalette.muted, bold: true)
-                    if data.testMode {
-                        WText(L10n.string("widget_live_test"), 10, WidgetPalette.bad, bold: true)
-                    }
-                }
+                WText(L10n.string("widget_live_sofia_offshore"), 10, WidgetPalette.muted, bold: true)
                 WText(L10n.format("widget_mw_value", Int(data.currentMw.rounded())), 28, bold: true)
                 WText(
                     L10n.format("widget_live_installed_capacity_format", Int(SofiaConstants.maxCapacityMw.rounded())),

@@ -213,6 +213,6 @@ extension LiveData {
             time = time.addingTimeInterval(step)
             index += 1
         }
-        return LiveData(testMode: false, committed: committed, actual: actual, from: from, to: to, fromCache: false)
+        return LiveData(committed: committed, actual: actual, from: from, to: to, fromCache: false)
     }
 }

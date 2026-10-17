@@ -15,7 +15,6 @@ struct GbShareEntry: TimelineEntry {
 struct GbShareProvider: TimelineProvider {
     func placeholder(in context: Context) -> GbShareEntry {
         GbShareEntry(date: Date(), data: GbShareData(
-            testMode: false,
             timeFrom: Date(),
             sofiaMw: 480,
             offshoreMw: 10_000,
@@ -99,15 +98,8 @@ private enum GbShareFormat {
 }
 
 private struct GbShareHeader: View {
-    let data: GbShareData
-
     var body: some View {
-        HStack(spacing: 6) {
-            WText(L10n.string("widget_gb_header"), 10, WidgetPalette.muted, bold: true)
-            if data.testMode {
-                WText(L10n.string("widget_live_test"), 9, WidgetPalette.bad, bold: true)
-            }
-        }
+        WText(L10n.string("widget_gb_header"), 10, WidgetPalette.muted, bold: true)
     }
 }
 
@@ -116,7 +108,7 @@ private struct GbShareCompactLayout: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            GbShareHeader(data: data)
+            GbShareHeader()
             Spacer().frame(height: 4)
             WText(GbShareFormat.percent(data.offshoreSharePercent), 26, bold: true)
             WText(L10n.string("widget_gb_of_offshore"), 10, WidgetPalette.muted)
@@ -134,7 +126,7 @@ private struct GbShareWideLayout: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
-                GbShareHeader(data: data)
+                GbShareHeader()
                 Spacer().frame(height: 4)
                 WText(GbShareFormat.percent(data.offshoreSharePercent), 30, bold: true)
                 WText(L10n.string("widget_gb_of_offshore"), 10, WidgetPalette.muted)

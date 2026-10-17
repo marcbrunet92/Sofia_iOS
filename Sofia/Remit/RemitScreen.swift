@@ -2,15 +2,22 @@ import Foundation
 import SwiftUI
 import SofiaCore
 
-/// Équivalent de ui/remit/RemitScreen.kt.
+/// Équivalent de ui/remit/RemitScreen.kt : l'écran Alertes.
 struct RemitScreen: View {
     let state: RemitUiState
+    /// Hauteur réservée sous le contenu (barre d'onglets flottante).
+    var bottomInset: CGFloat = 0
     let onRefresh: () async -> Void
     let onDismissError: () -> Void
-    let onNavigateToDetail: (Int) -> Void
+    let onOpenAlert: (String) -> Void
 
-    /// Groupes dépliés (identifiant du groupe), conservés au retour du détail.
-    @State private var expandedGroups: Set<String> = []
+    private static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 
     var body: some View {
         ZStack {
@@ -30,61 +37,60 @@ struct RemitScreen: View {
     }
 
     private var content: some View {
-        LazyVStack(spacing: 8) {
+        LazyVStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("tab_remit")
+                    .font(SofiaType.headlineMedium)
+                    .fontWeight(.bold)
+                if let lastFetch = state.lastFetchTimestamp {
+                    Text(verbatim: L10n.format("remit_last_update_format", Self.clockFormatter.string(from: lastFetch)))
+                        .font(SofiaType.bodySmall)
+                        .foregroundStyle(SofiaColors.onSurfaceVariant)
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
             if let errorKey = state.errorMessageKey {
                 RemitErrorBanner(text: L10n.string(errorKey), onDismiss: onDismissError)
             }
-            if state.testMode {
-                InfoCard(text: L10n.string("remit_test_mode_info"))
-            }
-            Text("remit_notices_title")
-                .font(SofiaType.headlineMedium)
-                .fontWeight(.bold)
-                .frame(maxWidth: .infinity, alignment: .leading)
             if let units = state.units {
                 UnitsAvailabilityCard(data: units)
             }
-            let sections = state.sections
-            InfoCard(text: String(localized: "remit_active_notices \(sections.noticeCount)"))
-            if sections.noticeCount == 0 {
-                InfoCard(text: L10n.string("remit_no_active_notices"))
-            } else {
-                // En vigueur d'abord, puis « À venir »
-                ForEach(sections.current) { group in
-                    groupView(group)
-                }
-                if !sections.upcoming.isEmpty {
-                    UpcomingDivider()
-                    ForEach(sections.upcoming) { group in
-                        groupView(group)
-                    }
-                }
+            if state.sections.noticeCount == 0 {
+                AllClearCard()
             }
-            InfoCard(text: L10n.format("remit_last_update_format", SofiaDateFormat.timestamp(state.lastFetchTimestamp)))
+            alertSection(titleKey: "remit_section_current", groups: state.sections.current)
+            alertSection(titleKey: "remit_section_upcoming", groups: state.sections.upcoming)
         }
         .padding(16)
+        .padding(.bottom, bottomInset)
     }
 
     @ViewBuilder
-    private func groupView(_ group: RemitGroup) -> some View {
-        if group.isFarmWide {
-            let expanded = expandedGroups.contains(group.id)
-            RemitGroupCard(
-                group: group,
-                expanded: expanded,
-                onToggle: {
-                    if expanded {
-                        expandedGroups.remove(group.id)
-                    } else {
-                        expandedGroups.insert(group.id)
-                    }
-                },
-                onOpenNotice: onNavigateToDetail
-            )
-        } else {
-            RemitNoticeCard(notice: group.first, phase: group.phase) {
-                onNavigateToDetail(group.first.id)
+    private func alertSection(titleKey: String, groups: [RemitGroup]) -> some View {
+        if !groups.isEmpty {
+            Text(LocalizedStringKey(titleKey))
+                .font(SofiaType.titleMedium)
+                .fontWeight(.semibold)
+                .padding(.leading, 4)
+                .padding(.top, 12)
+            ForEach(groups) { group in
+                AlertCard(group: group) { onOpenAlert(group.id) }
             }
         }
+    }
+}
+
+private struct AllClearCard: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(AvailabilityColors.available)
+            Text("remit_no_alerts")
+                .font(SofiaType.titleMedium)
+        }
+        .padding(16)
+        .sofiaCard()
     }
 }

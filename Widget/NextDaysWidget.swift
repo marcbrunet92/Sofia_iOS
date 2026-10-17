@@ -46,7 +46,7 @@ struct NextDaysProvider: TimelineProvider {
             let date = calendar.date(byAdding: .day, value: offset, to: today) ?? today
             return UouDay(date: UouDay.today(now: date), outputUsableMw: offset < 3 ? 400 : 0)
         }
-        return NextDaysData(testMode: false, days: days, fetchedAt: Date(), fromCache: false)
+        return NextDaysData(days: days, fetchedAt: Date(), fromCache: false)
     }
 }
 
@@ -82,17 +82,10 @@ struct NextDaysWidgetView: View {
         let data = entry.data
         let today = UouDay.today()
         let days = Array(data.days.filter { $0.date >= today }.prefix(14))
-        // Échelle : 1 400 MW pour Sofia ; en mode test, la plus grande valeur
-        let scale = data.testMode ? (days.map(\.outputUsableMw).max() ?? 1) : SofiaConstants.maxCapacityMw
+        let scale = SofiaConstants.maxCapacityMw
 
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                WText(L10n.string(wide ? "widget_next_days_header" : "widget_next_days_header_short"), 10, WidgetPalette.muted, bold: true)
-                if data.testMode {
-                    Spacer(minLength: 4)
-                    WText(L10n.string("widget_live_test"), 9, WidgetPalette.bad, bold: true)
-                }
-            }
+            WText(L10n.string(wide ? "widget_next_days_header" : "widget_next_days_header_short"), 10, WidgetPalette.muted, bold: true)
             if let first = days.first {
                 WText(L10n.format("widget_next_days_today_format", Int(first.outputUsableMw.rounded())), wide ? 16 : 13, bold: true)
             }

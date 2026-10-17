@@ -20,6 +20,8 @@ extension GraphDataset {
 /// Équivalent de ui/graph/GraphScreen.kt.
 struct GraphScreen: View {
     let state: GraphUiState
+    /// Hauteur réservée sous le contenu (barre d'onglets flottante).
+    var bottomInset: CGFloat = 0
     let onRefresh: () async -> Void
     let onSelectWindow: (TimeWindow) -> Void
     let onToggleDataset: (GraphDataset) -> Void
@@ -47,9 +49,6 @@ struct GraphScreen: View {
         let latest = state.pnPoints.max { $0.timeFrom < $1.timeFrom }
         return VStack(spacing: 16) {
             TitleBanner(titleKey: "title_graph")
-            if state.testMode {
-                WarningBanner(text: L10n.string("test_mode_warning"))
-            }
             if let errorKey = state.errorMessageKey {
                 ErrorBanner(text: L10n.string(errorKey), onDismiss: onDismissError)
             }
@@ -65,14 +64,11 @@ struct GraphScreen: View {
                 selectedWindow: state.selectedWindow,
                 onSelectWindow: onSelectWindow
             )
-            NextDaysCard(
-                days: state.uouDays,
-                capacityMw: state.testMode ? nil : SofiaConstants.maxCapacityMw
-            )
+            NextDaysCard(days: state.uouDays, capacityMw: SofiaConstants.maxCapacityMw)
             GbContextCard(context: state.gbContext, pnPoints: state.pnPoints)
-            DatasetsInfoCard()
         }
         .padding(16)
+        .padding(.bottom, bottomInset)
     }
 
     /// Répartition des séries : MW à gauche, l'autre unité (vent) à droite ; si seule une unité
@@ -101,12 +97,11 @@ struct GraphScreen: View {
                     color: dataset.color
                 )
             case .weather:
-                // L'API donne le vent en km/h : / 3.6 pour l'afficher en m/s, comme l'app Android
                 return ChartSeries(
                     id: dataset.labelKey,
-                    points: state.weatherPoints.map { $0.with(quantity: $0.quantity / 3.6) },
+                    points: state.weatherPoints,
                     allowNegative: false,
-                    unit: "m/s",
+                    unit: "km/h",
                     color: dataset.color
                 )
             case .mel:
@@ -140,7 +135,7 @@ private struct DatasetSelector: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach([GraphDataset.weather, .pn, .b1610, .mel], id: \.self) { option in
+                ForEach([GraphDataset.b1610, .pn, .weather], id: \.self) { option in
                     SofiaFilterChip(
                         label: L10n.string(option.labelKey),
                         selected: selected.contains(option),

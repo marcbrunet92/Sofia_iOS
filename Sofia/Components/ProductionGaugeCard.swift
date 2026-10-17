@@ -84,10 +84,33 @@ private struct GaugeLabels: View, Animatable {
                 .font(SofiaType.bodyMedium)
                 .foregroundStyle(SofiaColors.onSurfaceVariant)
             Spacer().frame(height: 4)
-            Text(L10n.format("gauge_data_timestamp_format", SofiaDateFormat.timestamp(dataTimestamp)))
+            Text(L10n.format("gauge_data_timestamp_format", GaugeTimestamp.format(dataTimestamp)))
                 .font(SofiaType.bodySmall)
                 .foregroundStyle(SofiaColors.onSurfaceVariant)
         }
         .multilineTextAlignment(.center)
+    }
+}
+
+/// « Aujourd'hui, 14:30 » / « Today, 14:30 » si la donnée date d'aujourd'hui, sinon « 17/10 14:30 »,
+/// dans le fuseau de l'appareil.
+private enum GaugeTimestamp {
+    private static let timeFormatter = formatter("HH:mm")
+    private static let dateTimeFormatter = formatter("dd/MM HH:mm")
+
+    static func format(_ date: Date?) -> String {
+        guard let date else { return "—" }
+        if Calendar.current.isDateInToday(date) {
+            return L10n.format("timestamp_today_format", timeFormatter.string(from: date))
+        }
+        return dateTimeFormatter.string(from: date)
+    }
+
+    private static func formatter(_ pattern: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateFormat = pattern
+        return formatter
     }
 }

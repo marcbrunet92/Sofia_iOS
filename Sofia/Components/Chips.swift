@@ -42,23 +42,3 @@ struct SofiaFilterChip: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
-
-/// `SuggestionChip` Material 3 non interactif (puces d'en-tête du détail REMIT).
-struct SofiaSuggestionChip: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(SofiaType.labelSmall)
-            .lineLimit(1)
-            .foregroundStyle(SofiaColors.onSurfaceVariant)
-            .padding(.horizontal, 16)
-            .frame(height: 32)
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(SofiaColors.outlineVariant, lineWidth: 1)
-            }
-            // Zone tactile minimale de 48 dp des puces Material
-            .padding(.vertical, 8)
-    }
-}

@@ -8,97 +8,98 @@ import SofiaCore
 struct SofiaApp: App {
     @State private var graphViewModel: GraphViewModel
     @State private var remitViewModel: RemitViewModel
-    @State private var settingsViewModel: SettingsViewModel
-    @State private var sofiaViewModel: SofiaViewModel
 
     init() {
         let api = SofiaApiService.shared
         let store = SofiaLocalStore.shared
-        let settingsRepository = SettingsRepository.shared
 
-        _settingsViewModel = State(initialValue: SettingsViewModel(settingsRepository: settingsRepository))
         _remitViewModel = State(initialValue: RemitViewModel(
-            repository: SofiaRemitRepository(api: api, store: store),
-            settingsRepository: settingsRepository
+            repository: SofiaRemitRepository(api: api, store: store)
         ))
         _graphViewModel = State(initialValue: GraphViewModel(
             productionRepository: SofiaProductionRepository(api: api, store: store),
             b1610Repository: SofiaB1610Repository(api: api, store: store),
             weatherRepository: SofiaWeatherRepository(api: api, store: store),
             melRepository: SofiaMelRepository(api: api, store: store),
-            contextRepository: SofiaContextRepository(api: api, store: store),
-            settingsRepository: settingsRepository
+            contextRepository: SofiaContextRepository(api: api, store: store)
         ))
-        _sofiaViewModel = State(initialValue: SofiaViewModel())
 
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     var body: some Scene {
         WindowGroup {
-            SofiaRootView(
-                graphViewModel: graphViewModel,
-                remitViewModel: remitViewModel,
-                settingsViewModel: settingsViewModel,
-                sofiaViewModel: sofiaViewModel
-            )
+            SofiaRootView(graphViewModel: graphViewModel, remitViewModel: remitViewModel)
         }
     }
 }
 
-private enum AppTab: Hashable {
+private enum AppTab: Int, CaseIterable, Hashable {
     case graph
     case remit
-    case sofia
-    case settings
+
+    var item: TabItem {
+        switch self {
+        case .graph: return TabItem(labelKey: "tab_graph", systemImage: "chart.xyaxis.line")
+        case .remit: return TabItem(labelKey: "tab_remit", systemImage: "exclamationmark.triangle.fill")
+        }
+    }
 }
 
-/// Équivalent de ui/SofiaApp.kt : barre de navigation du bas (Graphique, Alertes, Sofia, Réglages).
+/// Place réservée sous le contenu pour qu'il défile au-delà de la barre flottante.
+private let tabBarSpace: CGFloat = 88
+
+/// Équivalent de ui/SofiaApp.kt : les onglets Graphique et Alertes, qu'on fait défiler d'un
+/// balayage, sous une barre d'onglets flottante masquée sur le détail d'une alerte.
 struct SofiaRootView: View {
-    private let graphViewModel: GraphViewModel
-    private let remitViewModel: RemitViewModel
-    private let settingsViewModel: SettingsViewModel
-    private let sofiaViewModel: SofiaViewModel
+    let graphViewModel: GraphViewModel
+    let remitViewModel: RemitViewModel
 
+    /// Hors de la pile de navigation : l'onglet courant est conservé à l'aller-retour vers un détail.
     @State private var selectedTab: AppTab = .graph
-
-    init(
-        graphViewModel: GraphViewModel,
-        remitViewModel: RemitViewModel,
-        settingsViewModel: SettingsViewModel,
-        sofiaViewModel: SofiaViewModel
-    ) {
-        self.graphViewModel = graphViewModel
-        self.remitViewModel = remitViewModel
-        self.settingsViewModel = settingsViewModel
-        self.sofiaViewModel = sofiaViewModel
-    }
+    /// Route RemitDetail(key) : identifiant du groupe d'alertes ouvert.
+    @State private var path: [String] = []
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            GraphTab(viewModel: graphViewModel)
-                .tabItem { Label("tab_graph", systemImage: "chart.xyaxis.line") }
-                .tag(AppTab.graph)
-            RemitTab(viewModel: remitViewModel)
-                .tabItem { Label("tab_remit", systemImage: "exclamationmark.triangle.fill") }
-                .tag(AppTab.remit)
-            SofiaTab(viewModel: sofiaViewModel)
-                .tabItem { Label("tab_sofia", systemImage: "house.fill") }
-                .tag(AppTab.sofia)
-            SettingsTab(viewModel: settingsViewModel)
-                .tabItem { Label("tab_settings", systemImage: "gearshape.fill") }
-                .tag(AppTab.settings)
+        NavigationStack(path: $path) {
+            TabView(selection: $selectedTab) {
+                GraphPage(viewModel: graphViewModel)
+                    .tag(AppTab.graph)
+                RemitPage(viewModel: remitViewModel, onOpenAlert: { key in path.append(key) })
+                    .tag(AppTab.remit)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .background(SofiaColors.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: String.self) { key in
+                RemitDetailRoute(viewModel: remitViewModel, key: key)
+            }
         }
+        .overlay(alignment: .bottom) {
+            if path.isEmpty {
+                FloatingTabBar(
+                    items: AppTab.allCases.map(\.item),
+                    selectedIndex: selectedTab.rawValue,
+                    onSelect: { index in
+                        withAnimation { selectedTab = AppTab(rawValue: index) ?? .graph }
+                    }
+                )
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: path.isEmpty)
         .tint(SofiaColors.primary)
     }
 }
 
-private struct GraphTab: View {
+private struct GraphPage: View {
     let viewModel: GraphViewModel
 
     var body: some View {
         GraphScreen(
             state: viewModel.uiState,
+            bottomInset: tabBarSpace,
             onRefresh: { await viewModel.refresh().value },
             onSelectWindow: { viewModel.selectWindow($0) },
             onToggleDataset: { viewModel.toggleDataset($0) },
@@ -107,52 +108,35 @@ private struct GraphTab: View {
     }
 }
 
-/// Liste des avis et navigation vers le détail (route RemitDetail(id)).
-private struct RemitTab: View {
-    private let viewModel: RemitViewModel
-
-    @State private var path: [Int] = []
-
-    init(viewModel: RemitViewModel) {
-        self.viewModel = viewModel
-    }
+private struct RemitPage: View {
+    let viewModel: RemitViewModel
+    let onOpenAlert: (String) -> Void
 
     var body: some View {
-        NavigationStack(path: $path) {
-            RemitScreen(
-                state: viewModel.uiState,
-                onRefresh: { await viewModel.refresh().value },
-                onDismissError: { viewModel.dismissError() },
-                onNavigateToDetail: { id in path.append(id) }
-            )
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Int.self) { id in
-                if let notice = viewModel.uiState.remits.first(where: { $0.id == id }) {
-                    RemitDetailScreen(notice: notice)
-                }
-            }
-        }
-    }
-}
-
-private struct SofiaTab: View {
-    let viewModel: SofiaViewModel
-
-    var body: some View {
-        SofiaScreen(
-            state: viewModel.state,
-            onDismissError: { viewModel.onDismissError() }
-        )
-    }
-}
-
-private struct SettingsTab: View {
-    let viewModel: SettingsViewModel
-
-    var body: some View {
-        SettingsScreen(
+        RemitScreen(
             state: viewModel.uiState,
-            onToggleTestMode: { viewModel.setTestMode($0) }
+            bottomInset: tabBarSpace,
+            onRefresh: { await viewModel.refresh().value },
+            onDismissError: { viewModel.dismissError() },
+            onOpenAlert: onOpenAlert
         )
+    }
+}
+
+/// Détail d'une alerte, retrouvée par sa clé dans les sections courantes.
+private struct RemitDetailRoute: View {
+    let viewModel: RemitViewModel
+    let key: String
+
+    var body: some View {
+        let sections = viewModel.uiState.sections
+        if let group = (sections.current + sections.upcoming).first(where: { $0.id == key }) {
+            RemitDetailScreen(group: group)
+        } else {
+            // Alerte terminée ou passée « en cours » depuis l'ouverture : on garde le bouton retour
+            SofiaColors.background
+                .ignoresSafeArea()
+                .toolbar(.visible, for: .navigationBar)
+        }
     }
 }
