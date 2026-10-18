@@ -1,6 +1,7 @@
 # Compile l'app pour le simulateur, lance les tests de SofiaCore, puis prend les captures d'écran
 # de l'App Store (iPhone 6,3" et iPad 13") avec .github/scripts/screenshots.sh.
-# Les captures sont dans l'artefact « app-store-screenshots » de l'exécution.
+# Les captures sont dans l'artefact « app-store-screenshots » de l'exécution, et publiées sur la
+# branche « screenshots » (remplacée à chaque exécution réussie).
 name: App Store screenshots
 
 on:
@@ -26,6 +27,8 @@ jobs:
   screenshots:
     runs-on: macos-15
     timeout-minutes: 60
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -45,3 +48,16 @@ jobs:
           name: app-store-screenshots
           path: screenshots
           if-no-files-found: warn
+      - name: Publish to the screenshots branch
+        run: |
+          publish="$RUNNER_TEMP/publish"
+          mkdir -p "$publish"
+          cp -R screenshots/. "$publish/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan screenshots-publish
+          git rm -rfq .
+          cp -R "$publish/." .
+          git add iphone ipad
+          git commit -q -m "App Store screenshots of ${GITHUB_SHA::7}"
+          git push -f origin HEAD:refs/heads/screenshots
