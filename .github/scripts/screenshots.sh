@@ -62,7 +62,7 @@ device_type() {
 # Une capture sans canal alpha (refusé par App Store Connect)
 capture() {
     local udid="$1" file="$2"
-    sim 60 io "$udid" screenshot --type=png "$file"
+    sim 120 io "$udid" screenshot --type=png "$file"
     if sips -g hasAlpha "$file" | grep -q 'yes'; then
         sips -s format jpeg -s formatOptions best "$file" --out "$file.jpg" >/dev/null
         sips -s format png "$file.jpg" --out "$file" >/dev/null
@@ -79,15 +79,16 @@ shoot() {
     log "Démarrage du simulateur $family ($udid)"
     sim 600 bootstatus "$udid" -b >/dev/null
     log "Simulateur démarré"
-    sim 60 status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+    # La barre d'état ne répond parfois qu'après une à deux minutes sur un simulateur neuf
+    sim 300 status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
         --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
-    sim 300 install "$udid" "$APP"
+    sim 600 install "$udid" "$APP"
     log "App installée"
 
-    # Premier lancement : remplit le cache local (tout l'historique)
-    sim 120 launch "$udid" "$BUNDLE_ID"
+    # Premier lancement : remplit le cache local (tout l'historique). Sur iPad il dépasse 2 min.
+    sim 600 launch "$udid" "$BUNDLE_ID"
     sleep 60
-    sim 60 terminate "$udid" "$BUNDLE_ID" || true
+    sim 120 terminate "$udid" "$BUNDLE_ID" || true
     log "Cache rempli"
 
     mkdir -p "$OUT/$family"
@@ -95,13 +96,13 @@ shoot() {
         index=$((index + 1))
         IFS='|' read -r label appearance args <<<"$shot"
         log "$family $index : $label ($appearance)"
-        sim 60 ui "$udid" appearance "$appearance"
+        sim 120 ui "$udid" appearance "$appearance"
         # shellcheck disable=SC2086 # arguments séparés volontairement
-        sim 120 launch --terminate-running-process "$udid" "$BUNDLE_ID" $args
+        sim 300 launch --terminate-running-process "$udid" "$BUNDLE_ID" $args
         sleep "$SETTLE"
         file="$OUT/$family/$(printf '%02d' "$index")-$label-$appearance.png"
         capture "$udid" "$file"
-        sim 60 terminate "$udid" "$BUNDLE_ID" || true
+        sim 120 terminate "$udid" "$BUNDLE_ID" || true
     done
 
     sim 120 shutdown "$udid" || true
