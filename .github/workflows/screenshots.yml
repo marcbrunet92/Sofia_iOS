@@ -1,7 +1,6 @@
 # Compile l'app pour le simulateur, lance les tests de SofiaCore, puis prend les captures d'écran
 # de l'App Store (iPhone 6,3" et iPad 13") avec .github/scripts/screenshots.sh.
-# Les captures sont dans l'artefact « app-store-screenshots » de l'exécution, et publiées sur la
-# branche « screenshots » (remplacée à chaque exécution réussie).
+# Les captures sont dans l'artefact « app-store-screenshots » de l'exécution.
 name: App Store screenshots
 
 on:
@@ -26,8 +25,6 @@ jobs:
   screenshots:
     runs-on: macos-15
     timeout-minutes: 60
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
