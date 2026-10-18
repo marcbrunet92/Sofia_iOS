@@ -27,6 +27,19 @@ SHOTS=(
     "alert-detail|dark|-SofiaScreenshotTab remit -SofiaScreenshotDetail YES"
 )
 
+# Horodatage, pour voir quelle étape prend du temps
+log() {
+    echo "[$(date -u +%H:%M:%S)] $*"
+}
+
+# Commande simctl avec un délai maximal : un simulateur bloqué fait échouer le job au lieu de
+# l'occuper jusqu'à son délai d'une heure. macOS n'a pas `timeout` : alarm de perl.
+sim() {
+    local seconds="$1"
+    shift
+    perl -e 'alarm shift; exec @ARGV' "$seconds" xcrun simctl "$@"
+}
+
 RUNTIME=$(xcrun simctl list runtimes available -j \
     | jq -r '[.runtimes[] | select(.platform == "iOS")] | sort_by(.version | split(".") | map(tonumber)) | last | .identifier')
 echo "Runtime : $RUNTIME"
@@ -49,7 +62,7 @@ device_type() {
 # Une capture sans canal alpha (refusé par App Store Connect)
 capture() {
     local udid="$1" file="$2"
-    xcrun simctl io "$udid" screenshot --type=png "$file"
+    sim 60 io "$udid" screenshot --type=png "$file"
     if sips -g hasAlpha "$file" | grep -q 'yes'; then
         sips -s format jpeg -s formatOptions best "$file" --out "$file.jpg" >/dev/null
         sips -s format png "$file.jpg" --out "$file" >/dev/null
@@ -63,32 +76,36 @@ shoot() {
     local type udid index=0 shot label appearance args file
     type=$(device_type "$@")
     udid=$(xcrun simctl create "Sofia $family" "$type" "$RUNTIME")
-    xcrun simctl boot "$udid"
-    xcrun simctl bootstatus "$udid" -b
-    xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+    log "Démarrage du simulateur $family ($udid)"
+    sim 600 bootstatus "$udid" -b >/dev/null
+    log "Simulateur démarré"
+    sim 60 status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
         --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
-    xcrun simctl install "$udid" "$APP"
+    sim 300 install "$udid" "$APP"
+    log "App installée"
 
     # Premier lancement : remplit le cache local (tout l'historique)
-    xcrun simctl launch "$udid" "$BUNDLE_ID"
+    sim 120 launch "$udid" "$BUNDLE_ID"
     sleep 60
-    xcrun simctl terminate "$udid" "$BUNDLE_ID" || true
+    sim 60 terminate "$udid" "$BUNDLE_ID" || true
+    log "Cache rempli"
 
     mkdir -p "$OUT/$family"
     for shot in "${SHOTS[@]}"; do
         index=$((index + 1))
         IFS='|' read -r label appearance args <<<"$shot"
-        xcrun simctl ui "$udid" appearance "$appearance"
+        log "$family $index : $label ($appearance)"
+        sim 60 ui "$udid" appearance "$appearance"
         # shellcheck disable=SC2086 # arguments séparés volontairement
-        xcrun simctl launch --terminate-running-process "$udid" "$BUNDLE_ID" $args
+        sim 120 launch --terminate-running-process "$udid" "$BUNDLE_ID" $args
         sleep "$SETTLE"
         file="$OUT/$family/$(printf '%02d' "$index")-$label-$appearance.png"
         capture "$udid" "$file"
-        echo "$file"
+        sim 60 terminate "$udid" "$BUNDLE_ID" || true
     done
 
-    xcrun simctl shutdown "$udid"
-    xcrun simctl delete "$udid"
+    sim 120 shutdown "$udid" || true
+    sim 120 delete "$udid" || true
 }
 
 # Tailles acceptées par App Store Connect pour iPhone 6,1"/6,3" et iPad 12,9"/13"
