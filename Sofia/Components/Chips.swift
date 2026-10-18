@@ -6,6 +6,8 @@ struct SofiaFilterChip: View {
     let selected: Bool
     /// Petit carré de couleur affiché en tête (leadingIcon des jeux de données).
     var leadingColor: Color? = nil
+    /// Occupe la largeur que lui donne le parent (libellé tronqué si besoin), contenu centré.
+    var fillsWidth = false
     let action: () -> Void
 
     var body: some View {
@@ -20,8 +22,9 @@ struct SofiaFilterChip: View {
                 Text(label)
                     .font(SofiaType.labelLarge)
                     .lineLimit(1)
-                    .fixedSize()
+                    .fixedSize(horizontal: !fillsWidth, vertical: false)
             }
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
             .padding(.leading, leadingColor == nil ? 16 : 8)
             .padding(.trailing, 16)
             .frame(height: 32)

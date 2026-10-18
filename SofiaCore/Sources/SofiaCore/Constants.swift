@@ -13,23 +13,19 @@ public enum SofiaConstants {
 }
 
 public enum TimeWindow: String, CaseIterable, Codable, Sendable {
-    case hours6 = "HOURS_6"
     case hours24 = "HOURS_24"
-    case hours48 = "HOURS_48"
     case days7 = "DAYS_7"
     case month1 = "MONTH_1"
-    case month3 = "MONTH_3"
+    case month6 = "MONTH_6"
     case all = "ALL"
 
     /// Durée de la fenêtre en secondes ; `nil` pour « All ».
     public var duration: TimeInterval? {
         switch self {
-        case .hours6: return 6 * 3_600
         case .hours24: return 24 * 3_600
-        case .hours48: return 48 * 3_600
         case .days7: return 7 * 86_400
         case .month1: return 30 * 86_400
-        case .month3: return 90 * 86_400
+        case .month6: return 6 * 30 * 86_400
         case .all: return nil
         }
     }
@@ -37,12 +33,10 @@ public enum TimeWindow: String, CaseIterable, Codable, Sendable {
     /// Libellé court des chips (clé de localisation).
     public var labelKey: String {
         switch self {
-        case .hours6: return "time_window_6h"
         case .hours24: return "time_window_24h"
-        case .hours48: return "time_window_48h"
         case .days7: return "time_window_7d"
         case .month1: return "time_window_1m"
-        case .month3: return "time_window_3m"
+        case .month6: return "time_window_short_6m"
         case .all: return "time_window_all"
         }
     }
@@ -50,12 +44,10 @@ public enum TimeWindow: String, CaseIterable, Codable, Sendable {
     /// Libellé long (configuration du widget graphique).
     public var longLabelKey: String {
         switch self {
-        case .hours6: return "time_window_long_6h"
         case .hours24: return "time_window_long_24h"
-        case .hours48: return "time_window_long_48h"
         case .days7: return "time_window_long_7d"
         case .month1: return "time_window_long_1m"
-        case .month3: return "time_window_long_3m"
+        case .month6: return "time_window_long_6m"
         case .all: return "time_window_long_all"
         }
     }
@@ -63,12 +55,10 @@ public enum TimeWindow: String, CaseIterable, Codable, Sendable {
     /// Titre en capitales du widget graphique.
     public var shortTitleKey: String {
         switch self {
-        case .hours6: return "time_window_short_6h"
         case .hours24: return "time_window_short_24h"
-        case .hours48: return "time_window_short_48h"
         case .days7: return "time_window_short_7d"
         case .month1: return "time_window_short_1m"
-        case .month3: return "time_window_short_3m"
+        case .month6: return "time_window_short_6m"
         case .all: return "time_window_short_all"
         }
     }

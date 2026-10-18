@@ -10,8 +10,8 @@ public actor SofiaLocalStore {
 
     /// Version du cache, comme la version de la base Room. Si elle change, les tables sont
     /// supprimées au lieu d'être migrées : c'est un cache, le prochain rafraîchissement le remplit.
-    /// v3 : plus de mode test, une seule série par table.
-    public static let version = 3
+    /// v3 : plus de mode test, une seule série par table. v4 : comme la base Room v4.
+    public static let version = 4
 
     private let directory: URL?
     private var memory: [String: Any] = [:]

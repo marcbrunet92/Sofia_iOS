@@ -56,7 +56,7 @@ struct SofiaRootView: View {
     let remitViewModel: RemitViewModel
 
     /// Hors de la pile de navigation : l'onglet courant est conservé à l'aller-retour vers un détail.
-    @State private var selectedTab: AppTab = .graph
+    @State private var selectedTab: AppTab = ScreenshotOptions.opensAlertsTab ? .remit : .graph
     /// Route RemitDetail(key) : identifiant du groupe d'alertes ouvert.
     @State private var path: [String] = []
 
@@ -90,6 +90,22 @@ struct SofiaRootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: path.isEmpty)
         .tint(SofiaColors.primary)
+        .task {
+            await openFirstAlertForScreenshot()
+        }
+    }
+
+    /// Captures d'écran de l'App Store : ouvre la première alerte dès que la liste est chargée.
+    private func openFirstAlertForScreenshot() async {
+        guard ScreenshotOptions.opensFirstAlert else { return }
+        for _ in 0..<120 {
+            let sections = remitViewModel.uiState.sections
+            if let first = (sections.current + sections.upcoming).first {
+                path = [first.id]
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
     }
 }
 

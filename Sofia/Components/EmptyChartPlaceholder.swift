@@ -2,6 +2,9 @@ import SwiftUI
 
 /// EmptyChartPlaceHolder.kt : faux graphique en filigrane et message « Aucune donnée ».
 struct EmptyChartPlaceholder: View {
+    /// `nil` = toute la hauteur disponible.
+    var height: CGFloat? = 280
+
     var body: some View {
         let lineColor = SofiaColors.outlineVariant
         let containerColor = SofiaColors.surfaceContainerLow
@@ -57,7 +60,7 @@ struct EmptyChartPlaceholder: View {
             .background(containerColor.opacity(0.9), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 280)
+        .chartHeight(height)
         .background(containerColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

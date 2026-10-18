@@ -9,12 +9,6 @@
             "state" : "translated",
             "value" : "Back"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retour"
-          }
         }
       }
     },
@@ -25,12 +19,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia Wind Farm"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parc éolien Sofia"
           }
         }
       }
@@ -43,12 +31,6 @@
             "state" : "translated",
             "value" : "%1$@: %2$@ MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ : %2$@ MW"
-          }
         }
       }
     },
@@ -59,12 +41,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nothing to display for this period"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rien à afficher sur cette période"
           }
         }
       }
@@ -77,11 +53,16 @@
             "state" : "translated",
             "value" : "No data"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "chart_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucune donnée"
+            "value" : "Actual generation is reported with 7 days delay."
           }
         }
       }
@@ -94,12 +75,6 @@
             "state" : "translated",
             "value" : "Chart"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Courbe"
-          }
         }
       }
     },
@@ -110,12 +85,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wind and solar generation for the whole of Great Britain, about 2 h 30 behind."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production éolienne et solaire de toute la Grande-Bretagne, avec environ 2 h 30 de retard."
           }
         }
       }
@@ -128,12 +97,6 @@
             "state" : "translated",
             "value" : "Metered production. Arrives about 6 days later, then is revised: the reference value."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production mesurée au compteur. Arrive environ 6 jours plus tard, puis est révisée : la valeur de référence."
-          }
         }
       }
     },
@@ -144,12 +107,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Maximum the farm can export right now (turbines and export link available). Shaded ceiling on the chart."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puissance maximale que le parc peut exporter maintenant (turbines et liaison d'export disponibles). Plafond coloré sur le graphique."
           }
         }
       }
@@ -162,12 +119,6 @@
             "state" : "translated",
             "value" : "Production announced by the operator for each half-hour, published up to 1 h ahead: the near real-time value."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production annoncée par l'exploitant pour chaque demi-heure, publiée jusqu'à 1 h à l'avance : la valeur quasi temps réel."
-          }
         }
       }
     },
@@ -178,12 +129,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Official unavailability notices: outages, commissioning, reduced capacity."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avis officiels d'indisponibilité : pannes, mise en service, capacité réduite."
           }
         }
       }
@@ -196,12 +141,6 @@
             "state" : "translated",
             "value" : "About the data"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À propos des données"
-          }
         }
       }
     },
@@ -212,12 +151,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planned available output for each day, 2 to 14 days ahead, updated every hour."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puissance disponible prévue pour chaque jour, de J+2 à J+14, mise à jour toutes les heures."
           }
         }
       }
@@ -230,12 +163,6 @@
             "state" : "translated",
             "value" : "Wind speed at 120 m at the farm, history and forecast."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vitesse du vent à 120 m sur le parc, historique et prévision."
-          }
         }
       }
     },
@@ -245,13 +172,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Actual production"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production réelle"
+            "value" : "Actual"
           }
         }
       }
@@ -264,12 +185,6 @@
             "state" : "translated",
             "value" : "Available capacity"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité disponible"
-          }
         }
       }
     },
@@ -281,12 +196,6 @@
             "state" : "translated",
             "value" : "Committed"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Engagée"
-          }
         }
       }
     },
@@ -296,13 +205,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weather"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Météo"
+            "value" : "Wind speed"
           }
         }
       }
@@ -315,12 +218,6 @@
             "state" : "translated",
             "value" : "Dismiss error"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fermer l'erreur"
-          }
         }
       }
     },
@@ -331,12 +228,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pull to refresh and try again once the API returns data."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tirez pour actualiser et réessayez lorsque l'API renverra des données."
           }
         }
       }
@@ -349,12 +240,6 @@
             "state" : "translated",
             "value" : "No production data available yet."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune donnée de production pour le moment."
-          }
         }
       }
     },
@@ -365,12 +250,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unable to refresh data."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible d'actualiser les données."
           }
         }
       }
@@ -383,12 +262,6 @@
             "state" : "translated",
             "value" : "Unable to refresh alerts."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible d'actualiser les alertes."
-          }
         }
       }
     },
@@ -400,12 +273,6 @@
             "state" : "translated",
             "value" : "%1$ld%% of %2$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$ld %% de %2$ld MW"
-          }
         }
       }
     },
@@ -415,13 +282,18 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data from %1$@"
+            "value" : "Power committed\n%1$@"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "gb_context_before" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Donnée du %1$@"
+            "value" : "Counts of "
           }
         }
       }
@@ -432,13 +304,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GB context"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contexte Grande-Bretagne"
+            "value" : "Sofia currently generates %1$@ of the total UK wind power generation."
           }
         }
       }
@@ -451,12 +317,6 @@
             "state" : "translated",
             "value" : "No data yet."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pas encore de données."
-          }
         }
       }
     },
@@ -464,12 +324,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ GW"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ GW"
@@ -485,12 +339,6 @@
             "state" : "translated",
             "value" : "GB offshore wind"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Éolien en mer GB"
-          }
         }
       }
     },
@@ -502,12 +350,6 @@
             "state" : "translated",
             "value" : "Onshore %1$@ GW · Solar %2$@ GW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terrestre %1$@ GW · Solaire %2$@ GW"
-          }
         }
       }
     },
@@ -517,13 +359,18 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia share in GB wind production"
+            "value" : "Sofia vs UK actual wind power generation"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "gb_share_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Part de Sofia dans l'énergie éolienne du Royaume-Uni"
+            "value" : "of the UK committed wind power generation"
           }
         }
       }
@@ -536,12 +383,6 @@
             "state" : "translated",
             "value" : "Data from %1$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Données de %1$@"
-          }
         }
       }
     },
@@ -549,12 +390,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$ld MW"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$ld MW"
@@ -570,12 +405,6 @@
             "state" : "translated",
             "value" : "No forecast yet."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pas encore de prévision."
-          }
         }
       }
     },
@@ -587,29 +416,6 @@
             "state" : "translated",
             "value" : "%1$@ · %2$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$ld MW"
-          }
-        }
-      }
-    },
-    "next_days_subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Planned availability"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponibilité prévue"
-          }
         }
       }
     },
@@ -619,13 +425,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Next 14 days"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "14 prochains jours"
+            "value" : "Planned availability"
           }
         }
       }
@@ -638,12 +438,6 @@
             "state" : "translated",
             "value" : "All units"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toutes les unités"
-          }
         }
       }
     },
@@ -654,12 +448,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$ld MW available"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$ld MW disponibles"
           }
         }
       }
@@ -672,12 +460,6 @@
             "state" : "translated",
             "value" : "Available now"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponible maintenant"
-          }
         }
       }
     },
@@ -688,12 +470,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$ld / %2$ld MW available"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$ld / %2$ld MW disponibles"
           }
         }
       }
@@ -706,12 +482,6 @@
             "state" : "translated",
             "value" : "Available capacity unknown"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité disponible inconnue"
-          }
         }
       }
     },
@@ -722,12 +492,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Capacity"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité"
           }
         }
       }
@@ -740,12 +504,6 @@
             "state" : "translated",
             "value" : "End"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fin"
-          }
         }
       }
     },
@@ -757,12 +515,6 @@
             "state" : "translated",
             "value" : "Additional information"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Informations complémentaires"
-          }
         }
       }
     },
@@ -773,12 +525,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Start"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Début"
           }
         }
       }
@@ -799,30 +545,6 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "in %lld days"
-                }
-              }
-            }
-          }
-        },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld jour"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld jours"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld jours"
                 }
               }
             }
@@ -850,30 +572,6 @@
               }
             }
           }
-        },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld h"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld h"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "dans %lld h"
-                }
-              }
-            }
-          }
         }
       }
     },
@@ -884,12 +582,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Updated at %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mis à jour à %1$@"
           }
         }
       }
@@ -902,12 +594,6 @@
             "state" : "translated",
             "value" : "No active alerts"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune alerte en cours"
-          }
         }
       }
     },
@@ -918,12 +604,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "no end date"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sans date de fin"
           }
         }
       }
@@ -936,12 +616,6 @@
             "state" : "translated",
             "value" : "of %1$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sur %1$ld MW"
-          }
         }
       }
     },
@@ -952,12 +626,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Available capacity over time"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité disponible au fil du temps"
           }
         }
       }
@@ -970,12 +638,6 @@
             "state" : "translated",
             "value" : "Normal %1$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Normale %1$ld MW"
-          }
         }
       }
     },
@@ -986,12 +648,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "now"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "maintenant"
           }
         }
       }
@@ -1004,12 +660,6 @@
             "state" : "translated",
             "value" : "Ongoing"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En cours"
-          }
         }
       }
     },
@@ -1020,12 +670,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Upcoming"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À venir"
           }
         }
       }
@@ -1038,12 +682,6 @@
             "state" : "translated",
             "value" : "starts %1$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "début %1$@"
-          }
         }
       }
     },
@@ -1054,12 +692,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planned"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Planifié"
           }
         }
       }
@@ -1072,12 +704,6 @@
             "state" : "translated",
             "value" : "Unplanned"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Imprévu"
-          }
         }
       }
     },
@@ -1088,12 +714,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unit %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unité %1$@"
           }
         }
       }
@@ -1106,12 +726,6 @@
             "state" : "translated",
             "value" : "until %1$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jusqu'au %1$@"
-          }
         }
       }
     },
@@ -1122,12 +736,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This app is a private project not linked with any companies"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cette application est un projet privé, sans lien avec aucune entreprise."
           }
         }
       }
@@ -1140,12 +748,6 @@
             "state" : "translated",
             "value" : "Disclaimer"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avertissement"
-          }
         }
       }
     },
@@ -1156,12 +758,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Use T_HEYM11 instead of the live Sofia aggregate. This setting is persisted locally."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utilise T_HEYM11 à la place de l'agrégat Sofia en direct. Ce réglage est conservé localement."
           }
         }
       }
@@ -1174,12 +770,6 @@
             "state" : "translated",
             "value" : "Test mode"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mode test"
-          }
         }
       }
     },
@@ -1190,12 +780,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1.4 GW offshore wind farm located on Dogger Bank in the central North Sea, about 195 km off the northeast coast of England. It comprises 100 Siemens Gamesa SG 14-222 DD turbines (14 MW each) spread over a 593 km² site. 100% owned by RWE, with full commissioning expected by the end of 2026."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parc éolien offshore de 1,4 GW situé sur le Dogger Bank, en mer du Nord centrale, à environ 195 km au large des côtes du nord-est de l'Angleterre. Il comprend 100 turbines Siemens Gamesa SG 14-222 DD (14 MW chacune) réparties sur un site de 593 km². Détenu à 100 % par RWE, sa mise en service complète est prévue fin 2026."
           }
         }
       }
@@ -1208,12 +792,6 @@
             "state" : "translated",
             "value" : "Sofia Offshore Wind Farm"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parc éolien offshore Sofia"
-          }
         }
       }
     },
@@ -1224,12 +802,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dogger Bank · 195 km off the northeast English coast"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dogger Bank · 195 km au large des côtes du nord-est anglais"
           }
         }
       }
@@ -1242,12 +814,6 @@
             "state" : "translated",
             "value" : "Location of the Sofia wind farm, Dogger Bank"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Position du parc éolien Sofia, Dogger Bank"
-          }
         }
       }
     },
@@ -1258,12 +824,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Graph"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Graphique"
           }
         }
       }
@@ -1276,12 +836,6 @@
             "state" : "translated",
             "value" : "Alerts"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alertes"
-          }
         }
       }
     },
@@ -1293,12 +847,6 @@
             "state" : "translated",
             "value" : "Settings"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réglages"
-          }
         }
       }
     },
@@ -1306,12 +854,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia"
@@ -1327,12 +869,6 @@
             "state" : "translated",
             "value" : "TEST MODE — displaying T_HEYM11 only"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MODE TEST — T_HEYM11 uniquement"
-          }
         }
       }
     },
@@ -1344,12 +880,6 @@
             "state" : "translated",
             "value" : "1m"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 mois"
-          }
         }
       }
     },
@@ -1357,12 +887,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24h"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "24h"
@@ -1378,12 +902,6 @@
             "state" : "translated",
             "value" : "3m"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 mois"
-          }
         }
       }
     },
@@ -1391,12 +909,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48h"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "48h"
@@ -1412,12 +924,6 @@
             "state" : "translated",
             "value" : "6h"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6h"
-          }
         }
       }
     },
@@ -1427,13 +933,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7d"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7j"
+            "value" : "1w"
           }
         }
       }
@@ -1446,12 +946,6 @@
             "state" : "translated",
             "value" : "All"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout"
-          }
         }
       }
     },
@@ -1463,12 +957,6 @@
             "state" : "translated",
             "value" : "1 month"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 mois"
-          }
         }
       }
     },
@@ -1478,13 +966,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24 hours"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 heures"
+            "value" : "1 day"
           }
         }
       }
@@ -1497,12 +979,6 @@
             "state" : "translated",
             "value" : "3 months"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 mois"
-          }
         }
       }
     },
@@ -1513,12 +989,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "48 hours"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48 heures"
           }
         }
       }
@@ -1531,11 +1001,16 @@
             "state" : "translated",
             "value" : "6 hours"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "time_window_long_6m" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "6 heures"
+            "value" : "6 months"
           }
         }
       }
@@ -1548,12 +1023,6 @@
             "state" : "translated",
             "value" : "7 days"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 jours"
-          }
         }
       }
     },
@@ -1564,12 +1033,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Full history"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout l'historique"
           }
         }
       }
@@ -1582,12 +1045,6 @@
             "state" : "translated",
             "value" : "1 MONTH"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 MOIS"
-          }
         }
       }
     },
@@ -1597,13 +1054,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24 H"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 H"
+            "value" : "1d"
           }
         }
       }
@@ -1616,12 +1067,6 @@
             "state" : "translated",
             "value" : "3 MONTHS"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 MOIS"
-          }
         }
       }
     },
@@ -1629,12 +1074,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48 H"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "48 H"
@@ -1650,11 +1089,16 @@
             "state" : "translated",
             "value" : "6 H"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "time_window_short_6m" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "6 H"
+            "value" : "6m"
           }
         }
       }
@@ -1667,12 +1111,6 @@
             "state" : "translated",
             "value" : "7 D"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 J"
-          }
         }
       }
     },
@@ -1684,12 +1122,6 @@
             "state" : "translated",
             "value" : "ALL"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TOUT"
-          }
         }
       }
     },
@@ -1699,13 +1131,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Today, %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aujourd'hui, %1$@"
+            "value" : "today at %1$@"
           }
         }
       }
@@ -1718,12 +1144,6 @@
             "state" : "translated",
             "value" : "Sofia Generation"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puissance délivrée par Sofia"
-          }
         }
       }
     },
@@ -1731,12 +1151,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia"
@@ -1752,12 +1166,6 @@
             "state" : "translated",
             "value" : "Sofia Live Generation"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production Sofia en direct"
-          }
         }
       }
     },
@@ -1765,12 +1173,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "km/h"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "km/h"
@@ -1786,12 +1188,6 @@
             "state" : "translated",
             "value" : "MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MW"
-          }
         }
       }
     },
@@ -1802,12 +1198,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AVAILABILITY BY UNIT"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DISPONIBILITÉ PAR UNITÉ"
           }
         }
       }

@@ -9,12 +9,6 @@
             "state" : "translated",
             "value" : "Data from %1$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Données de %1$@"
-          }
         }
       }
     },
@@ -22,12 +16,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$ld MW"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ · %2$ld MW"
@@ -43,12 +31,6 @@
             "state" : "translated",
             "value" : "1m"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 mois"
-          }
         }
       }
     },
@@ -56,12 +38,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24h"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "24h"
@@ -77,12 +53,6 @@
             "state" : "translated",
             "value" : "3m"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 mois"
-          }
         }
       }
     },
@@ -90,12 +60,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48h"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "48h"
@@ -111,12 +75,6 @@
             "state" : "translated",
             "value" : "6h"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "6h"
-          }
         }
       }
     },
@@ -126,13 +84,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7d"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7j"
+            "value" : "1w"
           }
         }
       }
@@ -145,12 +97,6 @@
             "state" : "translated",
             "value" : "All"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout"
-          }
         }
       }
     },
@@ -162,12 +108,6 @@
             "state" : "translated",
             "value" : "1 month"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 mois"
-          }
         }
       }
     },
@@ -177,13 +117,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24 hours"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 heures"
+            "value" : "1 day"
           }
         }
       }
@@ -196,12 +130,6 @@
             "state" : "translated",
             "value" : "3 months"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 mois"
-          }
         }
       }
     },
@@ -212,12 +140,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "48 hours"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48 heures"
           }
         }
       }
@@ -230,11 +152,16 @@
             "state" : "translated",
             "value" : "6 hours"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "time_window_long_6m" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "6 heures"
+            "value" : "6 months"
           }
         }
       }
@@ -247,12 +174,6 @@
             "state" : "translated",
             "value" : "7 days"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 jours"
-          }
         }
       }
     },
@@ -263,12 +184,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Full history"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tout l'historique"
           }
         }
       }
@@ -281,12 +196,6 @@
             "state" : "translated",
             "value" : "1 MONTH"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 MOIS"
-          }
         }
       }
     },
@@ -296,13 +205,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24 H"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 H"
+            "value" : "1d"
           }
         }
       }
@@ -315,12 +218,6 @@
             "state" : "translated",
             "value" : "3 MONTHS"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3 MOIS"
-          }
         }
       }
     },
@@ -328,12 +225,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "48 H"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "48 H"
@@ -349,11 +240,16 @@
             "state" : "translated",
             "value" : "6 H"
           }
-        },
-        "fr" : {
+        }
+      }
+    },
+    "time_window_short_6m" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "6 H"
+            "value" : "6m"
           }
         }
       }
@@ -366,12 +262,6 @@
             "state" : "translated",
             "value" : "7 D"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 J"
-          }
         }
       }
     },
@@ -383,12 +273,6 @@
             "state" : "translated",
             "value" : "ALL"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TOUT"
-          }
         }
       }
     },
@@ -396,12 +280,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MW"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "MW"
@@ -417,12 +295,6 @@
             "state" : "translated",
             "value" : "Capacity %1$ld%% of %2$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité %1$ld %% sur %2$ld MW"
-          }
         }
       }
     },
@@ -433,12 +305,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Capacity %1$ld%%"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capacité %1$ld %%"
           }
         }
       }
@@ -451,12 +317,6 @@
             "state" : "translated",
             "value" : "Below 7 days, only committed production is shown (no actual data)."
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En dessous de 7 jours, seule la production engagée est affichée (pas de données réelles)."
-          }
         }
       }
     },
@@ -467,12 +327,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Actual production will be shown alongside committed production."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La production réelle sera affichée avec la production engagée."
           }
         }
       }
@@ -485,12 +339,6 @@
             "state" : "translated",
             "value" : "Adding…"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajout en cours…"
-          }
         }
       }
     },
@@ -501,12 +349,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Period shown by the graph widget."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Période affichée par le widget graphique."
           }
         }
       }
@@ -519,12 +361,6 @@
             "state" : "translated",
             "value" : "Time window"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fenêtre de temps"
-          }
         }
       }
     },
@@ -535,12 +371,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Confirm"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Valider"
           }
         }
       }
@@ -553,12 +383,6 @@
             "state" : "translated",
             "value" : "Mode: %1$@ • API: %2$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mode : %1$@ • API : %2$@"
-          }
         }
       }
     },
@@ -570,12 +394,6 @@
             "state" : "translated",
             "value" : "Sofia's announced output compared to offshore wind across Great Britain"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production annoncée de Sofia comparée à l'éolien en mer de Grande-Bretagne"
-          }
         }
       }
     },
@@ -583,12 +401,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SOFIA VS GB"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "SOFIA VS GB"
@@ -604,12 +416,6 @@
             "state" : "translated",
             "value" : "Sofia · Share of GB wind"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia · Part de l'éolien GB"
-          }
         }
       }
     },
@@ -620,12 +426,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ of all GB wind"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ de tout l'éolien GB"
           }
         }
       }
@@ -638,12 +438,6 @@
             "state" : "translated",
             "value" : "of GB offshore wind"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "de l'éolien en mer GB"
-          }
         }
       }
     },
@@ -654,12 +448,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GB offshore %1$@ GW"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En mer GB %1$@ GW"
           }
         }
       }
@@ -672,12 +460,6 @@
             "state" : "translated",
             "value" : "GB onshore %1$@ GW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terrestre GB %1$@ GW"
-          }
         }
       }
     },
@@ -685,12 +467,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia %1$@ MW"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia %1$@ MW"
@@ -706,12 +482,6 @@
             "state" : "translated",
             "value" : "Actual"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réel"
-          }
         }
       }
     },
@@ -722,12 +492,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Committed"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Engagé"
           }
         }
       }
@@ -740,12 +504,6 @@
             "state" : "translated",
             "value" : "Production over %1$@"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production sur %1$@"
-          }
         }
       }
     },
@@ -756,12 +514,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Committed vs actual production over a chosen period"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production engagée vs réelle sur la période choisie"
           }
         }
       }
@@ -774,12 +526,6 @@
             "state" : "translated",
             "value" : "Sofia · Graph"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia · Graphique"
-          }
         }
       }
     },
@@ -790,12 +536,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loading…"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chargement…"
           }
         }
       }
@@ -808,12 +548,6 @@
             "state" : "translated",
             "value" : "No data"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pas de données"
-          }
         }
       }
     },
@@ -825,12 +559,6 @@
             "state" : "translated",
             "value" : "%1$@ · OFFLINE"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · HORS-LIGNE"
-          }
         }
       }
     },
@@ -838,12 +566,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PRODUCTION · %1$@"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "PRODUCTION · %1$@"
@@ -859,12 +581,6 @@
             "state" : "translated",
             "value" : " · TEST"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · TEST"
-          }
         }
       }
     },
@@ -875,12 +591,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Last update: %1$@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dernière mise à jour : %1$@"
           }
         }
       }
@@ -893,12 +603,6 @@
             "state" : "translated",
             "value" : "Actual —"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réel —"
-          }
         }
       }
     },
@@ -909,12 +613,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Actual %1$ld MW"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réel %1$ld MW"
           }
         }
       }
@@ -927,12 +625,6 @@
             "state" : "translated",
             "value" : "Live production with gauge"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Production en direct avec jauge"
-          }
         }
       }
     },
@@ -944,12 +636,6 @@
             "state" : "translated",
             "value" : "of %1$ld MW installed"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sur %1$ld MW installés"
-          }
         }
       }
     },
@@ -957,12 +643,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia · Production"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia · Production"
@@ -978,12 +658,6 @@
             "state" : "translated",
             "value" : "MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MW"
-          }
         }
       }
     },
@@ -991,12 +665,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SOFIA OFFSHORE"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "SOFIA OFFSHORE"
@@ -1012,12 +680,6 @@
             "state" : "translated",
             "value" : "TEST"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TEST"
-          }
         }
       }
     },
@@ -1028,12 +690,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Medium Sofia production widget"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Widget moyen de production Sofia"
           }
         }
       }
@@ -1046,12 +702,6 @@
             "state" : "translated",
             "value" : "LIVE"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DIRECT"
-          }
         }
       }
     },
@@ -1059,12 +709,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TEST"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "TEST"
@@ -1080,12 +724,6 @@
             "state" : "translated",
             "value" : "%1$ld MW"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$ld MW"
-          }
         }
       }
     },
@@ -1096,12 +734,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planned availability for each of the next 14 days"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponibilité prévue pour chacun des 14 prochains jours"
           }
         }
       }
@@ -1114,12 +746,6 @@
             "state" : "translated",
             "value" : "NEXT 14 DAYS"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "14 PROCHAINS JOURS"
-          }
         }
       }
     },
@@ -1130,12 +756,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "14 DAYS"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "14 JOURS"
           }
         }
       }
@@ -1148,12 +768,6 @@
             "state" : "translated",
             "value" : "Sofia · Next 14 days"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia · 14 prochains jours"
-          }
         }
       }
     },
@@ -1164,12 +778,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today %1$ld MW"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aujourd'hui %1$ld MW"
           }
         }
       }
@@ -1182,12 +790,6 @@
             "state" : "translated",
             "value" : "Offline · "
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hors-ligne · "
-          }
         }
       }
     },
@@ -1198,12 +800,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Updated "
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mis à jour "
           }
         }
       }
@@ -1216,12 +812,6 @@
             "state" : "translated",
             "value" : "Small Sofia production widget"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Petit widget de production Sofia"
-          }
         }
       }
     },
@@ -1229,12 +819,6 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TEST"
-          }
-        },
-        "fr" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "TEST"
@@ -1250,12 +834,6 @@
             "state" : "translated",
             "value" : "Availability of each unit"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disponibilité de chaque unité"
-          }
         }
       }
     },
@@ -1267,12 +845,6 @@
             "state" : "translated",
             "value" : "AVAILABILITY BY UNIT"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DISPONIBILITÉ PAR UNITÉ"
-          }
         }
       }
     },
@@ -1283,12 +855,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia · Availability by unit"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sofia · Disponibilité par unité"
           }
         }
       }

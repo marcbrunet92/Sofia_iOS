@@ -9,12 +9,6 @@
             "state" : "translated",
             "value" : "Sofia Wind Farm"
           }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Parc éolien Sofia"
-          }
         }
       }
     }

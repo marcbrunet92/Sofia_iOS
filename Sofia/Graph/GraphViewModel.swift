@@ -21,9 +21,9 @@ enum GraphDataset: CaseIterable, Hashable {
 struct GraphUiState {
     var isLoading = true
     var isRefreshing = false
-    var selectedWindow: TimeWindow = .all
+    var selectedWindow: TimeWindow = .month1
     /// Ordre d'insertion conservé, comme le `Set` (LinkedHashSet) Kotlin.
-    var selectedDatasets: [GraphDataset] = [.pn]
+    var selectedDatasets: [GraphDataset] = [.pn, .b1610]
     // Données brutes
     /// MW
     var pnPoints: [GraphPoint] = []
@@ -73,6 +73,14 @@ final class GraphViewModel {
         self.weatherRepository = weatherRepository
         self.melRepository = melRepository
         self.contextRepository = contextRepository
+
+        // Captures d'écran de l'App Store : fenêtre et séries demandées au lancement
+        if let window = ScreenshotOptions.window {
+            uiState.selectedWindow = window
+        }
+        if let datasets = ScreenshotOptions.datasets {
+            uiState.selectedDatasets = datasets
+        }
 
         startObserving()
         refresh(forceLoading: !uiState.hasData)
