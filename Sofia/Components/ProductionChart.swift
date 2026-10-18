@@ -19,16 +19,30 @@ struct ProductionChartMulti: View {
     let left: [ChartSeries]
     var right: [ChartSeries] = []
     let tw: TimeWindow
+    /// Hauteur du graphique ; `nil` = toute la hauteur disponible.
+    var height: CGFloat? = 280
 
     var body: some View {
         let leftFiltered = left.filter { !$0.points.isEmpty }
         let rightFiltered = right.filter { !$0.points.isEmpty }
         if leftFiltered.isEmpty && rightFiltered.isEmpty {
-            EmptyChartPlaceholder()
+            EmptyChartPlaceholder(height: height)
         } else if leftFiltered.isEmpty {
-            ProductionChartContent(left: rightFiltered, right: [], tw: tw)
+            ProductionChartContent(left: rightFiltered, right: [], tw: tw, height: height)
         } else {
-            ProductionChartContent(left: leftFiltered, right: rightFiltered, tw: tw)
+            ProductionChartContent(left: leftFiltered, right: rightFiltered, tw: tw, height: height)
+        }
+    }
+}
+
+extension View {
+    /// Hauteur fixe, ou toute la hauteur disponible si `nil` (`Modifier.height` / `Modifier.weight(1f)`).
+    @ViewBuilder
+    func chartHeight(_ height: CGFloat?) -> some View {
+        if let height {
+            frame(height: height)
+        } else {
+            frame(maxHeight: .infinity)
         }
     }
 }
@@ -41,6 +55,7 @@ struct ProductionChartContent: View {
     let left: [ChartSeries]
     let right: [ChartSeries]
     let tw: TimeWindow
+    let height: CGFloat?
 
     /// Bord gauche de la zone visible.
     @State private var scrollPosition: Date
@@ -51,10 +66,11 @@ struct ProductionChartContent: View {
 
     private static let minimumVisibleLength: TimeInterval = 2 * 3_600
 
-    init(left: [ChartSeries], right: [ChartSeries], tw: TimeWindow) {
+    init(left: [ChartSeries], right: [ChartSeries], tw: TimeWindow, height: CGFloat? = 280) {
         self.left = left
         self.right = right
         self.tw = tw
+        self.height = height
         let bounds = ChartBounds(series: left + right)
         let length = bounds.windowLength(for: tw)
         _visibleLength = State(initialValue: length)
@@ -78,14 +94,17 @@ struct ProductionChartContent: View {
             .foregroundStyle(SofiaColors.onSurface)
 
             chart(plot: plot, bounds: bounds, length: length, format: format)
-                .frame(height: 280)
+                .chartHeight(height)
                 .simultaneousGesture(magnifyGesture(bounds: bounds, length: length))
         }
         .onChange(of: tw) { _, newWindow in
             applyWindow(newWindow)
         }
-        .onChange(of: bounds) { oldBounds, newBounds in
-            followData(from: oldBounds, to: newBounds)
+        .onChange(of: bounds) { _, newBounds in
+            scrollToEnd(of: newBounds)
+        }
+        .onChange(of: left.count + right.count) {
+            scrollToEnd(of: ChartBounds(series: left + right))
         }
     }
 
@@ -178,13 +197,12 @@ struct ProductionChartContent: View {
         }
     }
 
-    /// Nouvelles données : on reste calé sur la fin si on y était.
-    private func followData(from oldBounds: ChartBounds, to newBounds: ChartBounds) {
-        let length = Swift.min(visibleLength, newBounds.span)
-        let visibleEnd = scrollPosition.addingTimeInterval(length)
-        let wasAtEnd = visibleEnd >= oldBounds.domainEnd.addingTimeInterval(-length * 0.05)
-        let target = wasAtEnd ? newBounds.latestScroll(length: length) : scrollPosition
-        scrollPosition = newBounds.clampedScroll(target, length: length)
+    /// Étendue des données changée (série ajoutée ou retirée, nouveaux points) : retour à la fin.
+    /// Sinon, en retirant la météo, qui va jusqu'à maintenant, la fenêtre restait calée sur une
+    /// date plus ancienne au lieu de suivre la nouvelle fin des données.
+    private func scrollToEnd(of bounds: ChartBounds) {
+        let length = Swift.min(visibleLength, bounds.span)
+        scrollPosition = bounds.latestScroll(length: length)
     }
 
     nonisolated private static func timeLabel(_ value: AxisValue, format: AxisTimeFormat) -> String {
@@ -206,17 +224,32 @@ enum AxisTimeFormat: CaseIterable {
     case hours
     /// ≤ 3 j ET dans les 3 derniers jours de données
     case dayHours
-    /// ≤ 1 an
+    /// ≤ 6 j
+    case datesWithHours
+    /// au-delà
     case dates
-    /// > 1 an
-    case months
+
+    /// Heures du graphique toujours en heure de Paris, quel que soit le fuseau du téléphone.
+    nonisolated static let zone = TimeZone(identifier: "Europe/Paris") ?? .current
+
+    /// « CET » écrit en dur, comme sous la jauge, pour que les deux affichent la même chose.
+    /// L'heure est celle de Paris : en heure d'été (fin mars → fin octobre) c'est en réalité du
+    /// CEST (UTC+2), comme sur Android.
+    nonisolated static let zoneLabel = "CET"
 
     nonisolated var pattern: String {
         switch self {
         case .hours: return "HH:mm"
         case .dayHours: return "EEE HH:mm"
+        case .datesWithHours: return "dd/MM HH:00"
         case .dates: return "dd/MM"
-        case .months: return "MM/yy"
+        }
+    }
+
+    nonisolated var showsTime: Bool {
+        switch self {
+        case .hours, .dayHours, .datesWithHours: return true
+        case .dates: return false
         }
     }
 
@@ -227,16 +260,17 @@ enum AxisTimeFormat: CaseIterable {
         let isRecent = start >= dataEnd.addingTimeInterval(-recent - tolerance)
         if span <= 12 * 3_600 { return .hours }
         if span <= recent && isRecent { return .dayHours }
-        if span <= 365 * 86_400 { return .dates }
-        return .months
+        if span <= 6 * 86_400 { return .datesWithHours }
+        return .dates
     }
 
     nonisolated func string(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
-        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.timeZone = Self.zone
         formatter.dateFormat = pattern
-        return formatter.string(from: date)
+        let label = formatter.string(from: date)
+        return showsTime ? "\(label) \(Self.zoneLabel)" : label
     }
 }
 

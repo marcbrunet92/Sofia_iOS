@@ -36,13 +36,22 @@ struct GraphScreen: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                PullToRefreshContainer(isRefreshing: state.isRefreshing, onRefresh: onRefresh) {
-                    content
+                // Écran à hauteur fixe : le graphique prend toute la place restante, rien ne défile.
+                // Le ScrollView est gardé pour le tirer-pour-rafraîchir ; il ne défile réellement que
+                // sur les très petits écrans, où la hauteur minimale dépasse l'écran.
+                GeometryReader { proxy in
+                    PullToRefreshContainer(isRefreshing: state.isRefreshing, onRefresh: onRefresh) {
+                        content
+                            .frame(height: max(proxy.size.height, Self.minScreenHeight + bottomInset))
+                    }
                 }
             }
         }
         .foregroundStyle(SofiaColors.onSurface)
     }
+
+    /// En dessous (hors barre d'onglets), le graphique deviendrait illisible : l'écran défile alors.
+    private static let minScreenHeight: CGFloat = 620
 
     private var content: some View {
         let series = Self.makeSeries(state)
@@ -52,20 +61,21 @@ struct GraphScreen: View {
             if let errorKey = state.errorMessageKey {
                 ErrorBanner(text: L10n.string(errorKey), onDismiss: onDismissError)
             }
-            ProductionGaugeCard(
+            ProductionGaugeCompactCard(
                 currentMw: latest?.quantity ?? 0,
                 maxCapacityMw: SofiaConstants.maxCapacityMw,
-                dataTimestamp: latest?.timeFrom
+                dataTimestamp: latest?.timeFrom,
+                gbSharePercent: gbSharePercent(state.gbContext, pnPoints: state.pnPoints)
             )
-            DatasetSelector(selected: state.selectedDatasets, onSelect: onToggleDataset)
             GraphChartCard(
                 left: series.left,
                 right: series.right,
                 selectedWindow: state.selectedWindow,
-                onSelectWindow: onSelectWindow
+                onSelectWindow: onSelectWindow,
+                selectedDatasets: state.selectedDatasets,
+                onSelectDataset: onToggleDataset
             )
-            NextDaysCard(days: state.uouDays, capacityMw: SofiaConstants.maxCapacityMw)
-            GbContextCard(context: state.gbContext, pnPoints: state.pnPoints)
+            .frame(maxHeight: .infinity)
         }
         .padding(16)
         .padding(.bottom, bottomInset)
@@ -133,20 +143,59 @@ private struct DatasetSelector: View {
     let onSelect: (GraphDataset) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach([GraphDataset.b1610, .pn, .weather], id: \.self) { option in
-                    SofiaFilterChip(
-                        label: L10n.string(option.labelKey),
-                        selected: selected.contains(option),
-                        leadingColor: option.color
-                    ) {
-                        onSelect(option)
-                    }
+        FillRowLayout(spacing: 8) {
+            ForEach([GraphDataset.b1610, .pn, .weather], id: \.self) { option in
+                SofiaFilterChip(
+                    label: L10n.string(option.labelKey),
+                    selected: selected.contains(option),
+                    leadingColor: option.color,
+                    fillsWidth: true
+                ) {
+                    onSelect(option)
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Chaque chip garde sa largeur naturelle et l'espace restant est réparti à parts égales, pour que
+/// l'ensemble occupe toute la largeur ; s'il manque de la place, les largeurs sont réduites
+/// proportionnellement.
+private struct FillRowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let naturalWidth = sizes.reduce(0) { $0 + $1.width } + totalSpacing(subviews.count)
+        return CGSize(width: proposal.width ?? naturalWidth, height: sizes.map(\.height).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let natural = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let available = bounds.width - totalSpacing(subviews.count)
+        let naturalSum = natural.reduce(0, +)
+        let widths: [CGFloat]
+        if naturalSum <= 0 {
+            widths = natural
+        } else if naturalSum <= available {
+            let extra = (available - naturalSum) / CGFloat(natural.count)
+            widths = natural.map { $0 + extra }
+        } else {
+            widths = natural.map { $0 * available / naturalSum }
+        }
+        var x = bounds.minX
+        for index in subviews.indices {
+            subviews[index].place(
+                at: CGPoint(x: x, y: bounds.midY),
+                anchor: .leading,
+                proposal: ProposedViewSize(width: widths[index], height: bounds.height)
+            )
+            x += widths[index] + spacing
+        }
+    }
+
+    private func totalSpacing(_ count: Int) -> CGFloat {
+        spacing * CGFloat(max(count - 1, 0))
     }
 }
 
@@ -155,27 +204,42 @@ private struct GraphChartCard: View {
     let right: [ChartSeries]
     let selectedWindow: TimeWindow
     let onSelectWindow: (TimeWindow) -> Void
+    let selectedDatasets: [GraphDataset]
+    let onSelectDataset: (GraphDataset) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("chart_title")
-                .font(SofiaType.titleMedium)
-                .foregroundStyle(SofiaColors.onSurface)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(TimeWindow.allCases, id: \.self) { window in
-                        SofiaFilterChip(
-                            label: L10n.string(window.labelKey),
-                            selected: window == selectedWindow
-                        ) {
-                            onSelectWindow(window)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 4) {
+            DatasetSelector(selected: selectedDatasets, onSelect: onSelectDataset)
+            // Centrés s'ils tiennent sur la largeur, défilants sinon
+            ViewThatFits(in: .horizontal) {
+                windowChips
+                ScrollView(.horizontal, showsIndicators: false) {
+                    windowChips
                 }
             }
-            ProductionChartMulti(left: left, right: right, tw: selectedWindow)
+            .frame(maxWidth: .infinity)
+            ProductionChartMulti(left: left, right: right, tw: selectedWindow, height: nil)
+            if selectedDatasets.contains(.b1610) {
+                Text("chart_subtitle")
+                    .font(SofiaType.bodySmall)
+                    .foregroundStyle(SofiaColors.onSurfaceVariant)
+            }
         }
         .padding(16)
+        .frame(maxHeight: .infinity)
         .sofiaCard()
+    }
+
+    private var windowChips: some View {
+        HStack(spacing: 8) {
+            ForEach(TimeWindow.allCases, id: \.self) { window in
+                SofiaFilterChip(
+                    label: L10n.string(window.labelKey),
+                    selected: window == selectedWindow
+                ) {
+                    onSelectWindow(window)
+                }
+            }
+        }
     }
 }

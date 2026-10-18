@@ -9,34 +9,28 @@ import SofiaCore
 /// production engagée (PN, remplie) et, si la fenêtre est ≥ 7 jours, production réelle (B1610).
 
 enum GraphWindowOption: String, AppEnum, CaseIterable {
-    case hours6
     case hours24
-    case hours48
     case days7
     case month1
-    case month3
+    case month6
     case all
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "widget_config_time_window_title")
 
     static let caseDisplayRepresentations: [GraphWindowOption: DisplayRepresentation] = [
-        .hours6: DisplayRepresentation(title: "time_window_long_6h"),
         .hours24: DisplayRepresentation(title: "time_window_long_24h"),
-        .hours48: DisplayRepresentation(title: "time_window_long_48h"),
         .days7: DisplayRepresentation(title: "time_window_long_7d"),
         .month1: DisplayRepresentation(title: "time_window_long_1m"),
-        .month3: DisplayRepresentation(title: "time_window_long_3m"),
+        .month6: DisplayRepresentation(title: "time_window_long_6m"),
         .all: DisplayRepresentation(title: "time_window_long_all"),
     ]
 
     var timeWindow: TimeWindow {
         switch self {
-        case .hours6: return .hours6
         case .hours24: return .hours24
-        case .hours48: return .hours48
         case .days7: return .days7
         case .month1: return .month1
-        case .month3: return .month3
+        case .month6: return .month6
         case .all: return .all
         }
     }

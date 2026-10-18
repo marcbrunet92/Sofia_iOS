@@ -52,7 +52,7 @@ struct NextDaysCard: View {
         let today = UouDay.today()
         let shown = Array(days.filter { $0.date >= today }.prefix(14))
         InfoCardContainer {
-            CardTitle(titleKey: "next_days_title", subtitleKey: "next_days_subtitle")
+            CardTitle(titleKey: "next_days_title")
             if shown.isEmpty {
                 Text("next_days_empty")
                     .font(SofiaType.bodyMedium)
@@ -95,31 +95,33 @@ struct NextDaysCard: View {
     }
 }
 
-/// Contexte national (AGWS) : part de Sofia dans l'éolien GB (PN ÷ éolien en mer + terrestre), en pourcentage.
+/// Contexte national (AGWS) : part de Sofia dans l'éolien GB, en une phrase.
 struct GbContextCard: View {
     let context: GbContext?
     let pnPoints: [GraphPoint]
 
     var body: some View {
         InfoCardContainer {
-            CardTitle(titleKey: "gb_context_title")
-            if let context {
-                let wind = context.windOffshoreMw.map { $0 + (context.windOnshoreMw ?? 0) }
-                let sofiaMw = pnPoints.last { $0.timeFrom == context.timeFrom }?.quantity
-                let share: Double? = {
-                    guard let wind, wind > 0, let sofiaMw else { return nil }
-                    return sofiaMw / wind * 100
-                }()
-                Text(verbatim: share.map { String(format: "%.1f %%", locale: Locale.current, $0) } ?? "—")
-                    .font(SofiaType.headlineMedium)
-                Text("gb_share_label")
-                    .font(SofiaType.bodySmall)
-                    .foregroundStyle(SofiaColors.onSurfaceVariant)
-            } else {
+            if context == nil {
                 Text("gb_empty")
                     .font(SofiaType.bodyMedium)
                     .foregroundStyle(SofiaColors.onSurfaceVariant)
+            } else {
+                Text(verbatim: L10n.format("gb_context_title", formatGbShare(gbSharePercent(context, pnPoints: pnPoints))))
+                    .font(SofiaType.bodyMedium)
             }
         }
     }
+}
+
+/// Part de Sofia (PN) dans l'éolien GB (en mer + terrestre) au même créneau, en %. `nil` si incalculable.
+func gbSharePercent(_ context: GbContext?, pnPoints: [GraphPoint]) -> Double? {
+    guard let context, let offshore = context.windOffshoreMw else { return nil }
+    let wind = offshore + (context.windOnshoreMw ?? 0)
+    guard wind > 0, let sofiaMw = pnPoints.last(where: { $0.timeFrom == context.timeFrom })?.quantity else { return nil }
+    return sofiaMw / wind * 100
+}
+
+func formatGbShare(_ share: Double?) -> String {
+    share.map { String(format: "%.1f %%", locale: Locale.current, $0) } ?? "—"
 }

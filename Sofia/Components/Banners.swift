@@ -10,8 +10,9 @@ struct TitleBanner: View {
             .font(SofiaType.headlineMedium)
             .fontWeight(.bold)
             .foregroundStyle(SofiaColors.onSurface)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(8)
     }
 }
 
