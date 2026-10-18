@@ -7,7 +7,6 @@ name: App Store screenshots
 on:
   workflow_dispatch:
   push:
-    branches: ['claude/**']
 
 concurrency:
   group: screenshots-${{ github.ref }}
@@ -48,16 +47,3 @@ jobs:
           name: app-store-screenshots
           path: screenshots
           if-no-files-found: warn
-      - name: Publish to the screenshots branch
-        run: |
-          publish="$RUNNER_TEMP/publish"
-          mkdir -p "$publish"
-          cp -R screenshots/. "$publish/"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan screenshots-publish
-          git rm -rfq .
-          cp -R "$publish/." .
-          git add iphone ipad
-          git commit -q -m "App Store screenshots of ${GITHUB_SHA::7}"
-          git push -f origin HEAD:refs/heads/screenshots
