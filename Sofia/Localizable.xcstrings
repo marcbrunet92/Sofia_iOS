@@ -1,6 +1,149 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "about_app_text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia Wind Farm follows the output of the Sofia offshore wind farm in near real time: production announced by the operator, metered production, the capacity it can export, wind at the site, the planned availability for the next 14 days and the official outage notices."
+          }
+        }
+      }
+    },
+    "about_done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "about_open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About this app"
+          }
+        }
+      }
+    },
+    "about_privacy_link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy policy"
+          }
+        }
+      }
+    },
+    "about_privacy_text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account, no ads, no tracking. The app does not collect any personal data: it only downloads public data from sofia.lemarc.fr."
+          }
+        }
+      }
+    },
+    "about_privacy_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "about_source_elexon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Electricity data comes from Elexon's Balancing Mechanism Reporting Service (BMRS). Contains BMRS data © Elexon Limited copyright and database right %1$@."
+          }
+        }
+      }
+    },
+    "about_source_elexon_link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elexon BMRS"
+          }
+        }
+      }
+    },
+    "about_source_weather" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weather data by Open-Meteo.com, licensed under CC BY 4.0."
+          }
+        }
+      }
+    },
+    "about_source_weather_link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open-Meteo"
+          }
+        }
+      }
+    },
+    "about_sources_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sources"
+          }
+        }
+      }
+    },
+    "about_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
+    "about_version_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %1$@ (%2$@)"
+          }
+        }
+      }
+    },
     "action_back" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -735,7 +878,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This app is a private project not linked with any companies"
+            "value" : "Sofia Wind Farm is an independent app. It is not affiliated with, endorsed or sponsored by RWE, the Sofia offshore wind farm, Elexon or Open-Meteo. Figures are for information only and may be delayed or revised."
           }
         }
       }

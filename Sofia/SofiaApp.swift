@@ -59,11 +59,12 @@ struct SofiaRootView: View {
     @State private var selectedTab: AppTab = ScreenshotOptions.opensAlertsTab ? .remit : .graph
     /// Route RemitDetail(key) : identifiant du groupe d'alertes ouvert.
     @State private var path: [String] = []
+    @State private var showsAbout = false
 
     var body: some View {
         NavigationStack(path: $path) {
             TabView(selection: $selectedTab) {
-                GraphPage(viewModel: graphViewModel)
+                GraphPage(viewModel: graphViewModel, onShowAbout: { showsAbout = true })
                     .tag(AppTab.graph)
                 RemitPage(viewModel: remitViewModel, onOpenAlert: { key in path.append(key) })
                     .tag(AppTab.remit)
@@ -90,9 +91,54 @@ struct SofiaRootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: path.isEmpty)
         .tint(SofiaColors.primary)
+        .sheet(isPresented: $showsAbout) {
+            AboutScreen()
+        }
         .task {
             await openFirstAlertForScreenshot()
+            await playDemoTour()
         }
+    }
+
+    /// Vidéo de démonstration (.github/scripts/demo-video.sh) : parcourt l'app comme le ferait un
+    /// utilisateur, sans toucher l'écran (simctl ne sait pas taper).
+    private func playDemoTour() async {
+        guard ScreenshotOptions.playsDemoTour else { return }
+        func pause(_ seconds: Double) async {
+            try? await Task.sleep(for: .seconds(seconds))
+        }
+        for _ in 0..<240 {
+            if graphViewModel.uiState.hasData { break }
+            await pause(0.25)
+        }
+        await pause(3)
+
+        for window in [TimeWindow.hours24, .days7, .month1, .month6, .all] {
+            withAnimation { graphViewModel.selectWindow(window) }
+            await pause(2.5)
+        }
+        for dataset in [GraphDataset.weather, .b1610, .mel] {
+            withAnimation { graphViewModel.toggleDataset(dataset) }
+            await pause(3.5)
+            withAnimation { graphViewModel.toggleDataset(dataset) }
+            await pause(1)
+        }
+
+        showsAbout = true
+        await pause(6)
+        showsAbout = false
+        await pause(2)
+
+        withAnimation { selectedTab = .remit }
+        await pause(4)
+        let sections = remitViewModel.uiState.sections
+        if let first = (sections.current + sections.upcoming).first {
+            path = [first.id]
+            await pause(5)
+            path = []
+            await pause(2)
+        }
+        withAnimation { selectedTab = .graph }
     }
 
     /// Captures d'écran de l'App Store : ouvre la première alerte dès que la liste est chargée.
@@ -111,6 +157,7 @@ struct SofiaRootView: View {
 
 private struct GraphPage: View {
     let viewModel: GraphViewModel
+    let onShowAbout: () -> Void
 
     var body: some View {
         GraphScreen(
@@ -119,7 +166,8 @@ private struct GraphPage: View {
             onRefresh: { await viewModel.refresh().value },
             onSelectWindow: { viewModel.selectWindow($0) },
             onToggleDataset: { viewModel.toggleDataset($0) },
-            onDismissError: { viewModel.dismissError() }
+            onDismissError: { viewModel.dismissError() },
+            onShowAbout: onShowAbout
         )
     }
 }

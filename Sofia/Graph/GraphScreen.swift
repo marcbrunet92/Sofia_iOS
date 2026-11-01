@@ -26,6 +26,7 @@ struct GraphScreen: View {
     let onSelectWindow: (TimeWindow) -> Void
     let onToggleDataset: (GraphDataset) -> Void
     let onDismissError: () -> Void
+    let onShowAbout: () -> Void
 
     var body: some View {
         ZStack {
@@ -58,6 +59,9 @@ struct GraphScreen: View {
         let latest = state.pnPoints.max { $0.timeFrom < $1.timeFrom }
         return VStack(spacing: 16) {
             TitleBanner(titleKey: "title_graph")
+                .overlay(alignment: .trailing) {
+                    AboutButton(action: onShowAbout)
+                }
             if let errorKey = state.errorMessageKey {
                 ErrorBanner(text: L10n.string(errorKey), onDismiss: onDismissError)
             }

@@ -1,6 +1,8 @@
 # Compile l'app pour le simulateur, lance les tests de SofiaCore, puis prend les captures d'écran
 # de l'App Store (iPhone 6,3" et iPad 13") avec .github/scripts/screenshots.sh.
 # Les captures sont dans l'artefact « app-store-screenshots » de l'exécution.
+# Le job demo-video filme le parcours de l'app sur un simulateur iPhone
+# (.github/scripts/demo-video.sh) : artefact « app-review-demo-video ».
 name: App Store screenshots
 
 on:
@@ -43,4 +45,24 @@ jobs:
         with:
           name: app-store-screenshots
           path: screenshots
+          if-no-files-found: warn
+
+  demo-video:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Build for the simulator
+        run: |
+          xcodebuild -project Sofia.xcodeproj -scheme Sofia -configuration Debug             -destination 'generic/platform=iOS Simulator' -derivedDataPath build             CODE_SIGNING_ALLOWED=NO -quiet build
+      - name: Record the demo video
+        run: .github/scripts/demo-video.sh build/Build/Products/Debug-iphonesimulator/Sofia.app demo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-review-demo-video
+          path: demo
           if-no-files-found: warn

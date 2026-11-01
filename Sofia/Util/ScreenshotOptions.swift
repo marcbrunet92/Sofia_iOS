@@ -19,6 +19,11 @@ enum ScreenshotOptions {
         defaults.bool(forKey: "SofiaScreenshotDetail")
     }
 
+    /// Parcours automatique de l'app pour la vidéo de démonstration (.github/scripts/demo-video.sh).
+    static var playsDemoTour: Bool {
+        defaults.bool(forKey: "SofiaDemoTour")
+    }
+
     /// Fenêtre de temps, par sa valeur brute (`HOURS_24`, `DAYS_7`, `MONTH_1`, `MONTH_6`, `ALL`).
     static var window: TimeWindow? {
         defaults.string(forKey: "SofiaScreenshotWindow").flatMap(TimeWindow.init(rawValue:))
