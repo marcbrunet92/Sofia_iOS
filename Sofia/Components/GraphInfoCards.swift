@@ -10,7 +10,7 @@ enum AvailabilityColors {
     static let unavailable = SofiaColors.fixed(0xD85A30)
 }
 
-private struct InfoCardContainer<Content: View>: View {
+struct InfoCardContainer<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -23,7 +23,7 @@ private struct InfoCardContainer<Content: View>: View {
     }
 }
 
-private struct CardTitle: View {
+struct CardTitle: View {
     let titleKey: String
     var subtitleKey: String? = nil
 
@@ -124,4 +124,94 @@ func gbSharePercent(_ context: GbContext?, pnPoints: [GraphPoint]) -> Double? {
 
 func formatGbShare(_ share: Double?) -> String {
     share.map { String(format: "%.1f %%", locale: Locale.current, $0) } ?? "—"
+}
+
+/// Contexte national en détail (onglet Statistiques) : éolien en mer GB, part de Sofia dans
+/// l'éolien en mer puis dans tout l'éolien, éolien terrestre et solaire.
+struct GbContextDetailCard: View {
+    let context: GbContext?
+    let pnPoints: [GraphPoint]
+
+    var body: some View {
+        InfoCardContainer {
+            CardTitle(titleKey: "gb_detail_title")
+            if let context {
+                let offshore = context.windOffshoreMw
+                let sofiaMw = pnPoints.last { $0.timeFrom == context.timeFrom }?.quantity
+                HStack(alignment: .top, spacing: 8) {
+                    StatTile(
+                        label: L10n.string("gb_offshore_label"),
+                        value: offshore.map { L10n.format("gb_gw_format", Self.gigawatts($0)) } ?? "—",
+                        caption: L10n.format("gb_source_format", Self.time(context.timeFrom))
+                    )
+                    StatTile(
+                        label: L10n.string("gb_share_offshore_label"),
+                        value: Self.share(sofiaMw, of: offshore),
+                        caption: L10n.string("gb_share_caption")
+                    )
+                }
+                Text(verbatim: L10n.format(
+                    "gb_others_format",
+                    context.windOnshoreMw.map(Self.gigawatts) ?? "—",
+                    context.solarMw.map(Self.gigawatts) ?? "—"
+                ))
+                .font(SofiaType.bodySmall)
+                .foregroundStyle(SofiaColors.onSurfaceVariant)
+                Text(verbatim: L10n.format("gb_share_all_wind_format", formatGbShare(gbSharePercent(context, pnPoints: pnPoints))))
+                    .font(SofiaType.bodySmall)
+                    .foregroundStyle(SofiaColors.onSurfaceVariant)
+            } else {
+                Text("gb_empty")
+                    .font(SofiaType.bodyMedium)
+                    .foregroundStyle(SofiaColors.onSurfaceVariant)
+            }
+        }
+    }
+
+    /// « 12,3 % », ou « — » sans donnée.
+    private static func share(_ sofiaMw: Double?, of totalMw: Double?) -> String {
+        guard let sofiaMw, let totalMw, totalMw > 0 else { return "—" }
+        return formatGbShare(sofiaMw / totalMw * 100)
+    }
+
+    private static func gigawatts(_ mw: Double) -> String {
+        String(format: "%.1f", locale: Locale.current, mw / 1_000)
+    }
+
+    /// « HH:mm » aujourd'hui, « dd/MM HH:mm » sinon, dans le fuseau de l'appareil.
+    private static func time(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateFormat = Calendar.current.isDateInToday(date) ? "HH:mm" : "dd/MM HH:mm"
+        return formatter.string(from: date)
+    }
+}
+
+/// Tuile « libellé, valeur, précision » (contexte GB, statistiques).
+struct StatTile: View {
+    let label: String
+    let value: String
+    var caption: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: label)
+                .font(SofiaType.labelSmall)
+                .foregroundStyle(SofiaColors.onSurfaceVariant)
+            Text(verbatim: value)
+                .font(SofiaType.titleLarge)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if let caption {
+                Text(verbatim: caption)
+                    .font(SofiaType.labelSmall)
+                    .foregroundStyle(SofiaColors.onSurfaceVariant)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(SofiaColors.surfaceContainer, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
 }

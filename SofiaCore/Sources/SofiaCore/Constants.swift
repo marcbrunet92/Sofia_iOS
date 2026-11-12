@@ -10,6 +10,44 @@ public enum SofiaConstants {
 
     /// App Group optionnel : s'il est activé sur l'app ET le widget, ils partagent le cache.
     public static let appGroupIdentifier = "group.com.lemarc.Sofia"
+
+    /// Capacité installée de chaque unité, en MW (capacité normale des avis REMIT) ; leur somme
+    /// vaut `maxCapacityMw`.
+    public static let unitCapacitiesMw: [String: Double] = [
+        "T_SOFOW-11": 336,
+        "T_SOFOW-12": 350,
+        "T_SOFOW-21": 406,
+        "T_SOFOW-22": 308,
+    ]
+
+    /// Consommation électrique annuelle d'un foyer britannique type (valeur médiane Ofgem), en MWh.
+    public static let homeAnnualMwh = 2.7
+
+    /// Version web de l'app.
+    public static let webURL = "https://sofia.lemarc.fr/"
+}
+
+/// Unité d'affichage de la vitesse du vent. L'API la donne en km/h.
+public enum WindSpeedUnit: String, CaseIterable, Codable, Sendable {
+    case metersPerSecond = "ms"
+    case kilometersPerHour = "kmh"
+    case knots = "kn"
+
+    public var symbol: String {
+        switch self {
+        case .metersPerSecond: return "m/s"
+        case .kilometersPerHour: return "km/h"
+        case .knots: return "kn"
+        }
+    }
+
+    public func fromKmh(_ value: Double) -> Double {
+        switch self {
+        case .metersPerSecond: return value / 3.6
+        case .kilometersPerHour: return value
+        case .knots: return value / 1.852
+        }
+    }
 }
 
 public enum TimeWindow: String, CaseIterable, Codable, Sendable {

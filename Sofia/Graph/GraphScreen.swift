@@ -20,6 +20,8 @@ extension GraphDataset {
 /// Équivalent de ui/graph/GraphScreen.kt.
 struct GraphScreen: View {
     let state: GraphUiState
+    /// Unité d'affichage du vent (réglages) ; l'API le donne en km/h.
+    var windUnit: WindSpeedUnit = .metersPerSecond
     /// Hauteur réservée sous le contenu (barre d'onglets flottante).
     var bottomInset: CGFloat = 0
     let onRefresh: () async -> Void
@@ -55,10 +57,22 @@ struct GraphScreen: View {
     private static let minScreenHeight: CGFloat = 620
 
     private var content: some View {
-        let series = Self.makeSeries(state)
+        let series = Self.makeSeries(state, windUnit: windUnit)
         let latest = state.pnPoints.max { $0.timeFrom < $1.timeFrom }
         return VStack(spacing: 16) {
             TitleBanner(titleKey: "title_graph")
+                .overlay(alignment: .leading) {
+                    if let latest {
+                        ShareLink(item: Self.shareText(latest)) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(SofiaColors.onSurfaceVariant)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel(Text("action_share"))
+                    }
+                }
                 .overlay(alignment: .trailing) {
                     AboutButton(action: onShowAbout)
                 }
@@ -87,7 +101,10 @@ struct GraphScreen: View {
 
     /// Répartition des séries : MW à gauche, l'autre unité (vent) à droite ; si seule une unité
     /// non-MW est sélectionnée, elle passe à gauche.
-    private static func makeSeries(_ state: GraphUiState) -> (left: [ChartSeries], right: [ChartSeries]) {
+    private static func makeSeries(
+        _ state: GraphUiState,
+        windUnit: WindSpeedUnit
+    ) -> (left: [ChartSeries], right: [ChartSeries]) {
         let ordered = state.selectedDatasets.sorted {
             (GraphDataset.drawOrder.firstIndex(of: $0) ?? 0) < (GraphDataset.drawOrder.firstIndex(of: $1) ?? 0)
         }
@@ -113,9 +130,9 @@ struct GraphScreen: View {
             case .weather:
                 return ChartSeries(
                     id: dataset.labelKey,
-                    points: state.weatherPoints,
+                    points: state.weatherPoints.map { $0.with(quantity: windUnit.fromKmh($0.quantity)) },
                     allowNegative: false,
-                    unit: "km/h",
+                    unit: windUnit.symbol,
                     color: dataset.color
                 )
             case .mel:
@@ -139,6 +156,24 @@ struct GraphScreen: View {
         } else {
             return (mwSeries, [])
         }
+    }
+}
+
+extension GraphScreen {
+    /// Texte partagé : la production annoncée du moment et le lien vers la version web.
+    static func shareText(_ latest: GraphPoint) -> String {
+        let percent = Int((latest.quantity / Swift.max(SofiaConstants.maxCapacityMw, 1) * 100).rounded())
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("d MMM HH:mm")
+        return L10n.format(
+            "share_production_format",
+            Int(latest.quantity.rounded()),
+            percent,
+            Int(SofiaConstants.maxCapacityMw.rounded()),
+            formatter.string(from: latest.timeFrom)
+        ) + "\n" + SofiaConstants.webURL
     }
 }
 

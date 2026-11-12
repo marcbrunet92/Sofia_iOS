@@ -66,7 +66,8 @@ final class GraphViewModel {
         b1610Repository: SofiaB1610Repository,
         weatherRepository: SofiaWeatherRepository,
         melRepository: SofiaMelRepository,
-        contextRepository: SofiaContextRepository
+        contextRepository: SofiaContextRepository,
+        initialWindow: TimeWindow? = nil
     ) {
         self.productionRepository = productionRepository
         self.b1610Repository = b1610Repository
@@ -74,6 +75,10 @@ final class GraphViewModel {
         self.melRepository = melRepository
         self.contextRepository = contextRepository
 
+        // Période choisie dans les réglages
+        if let initialWindow {
+            uiState.selectedWindow = initialWindow
+        }
         // Captures d'écran de l'App Store : fenêtre et séries demandées au lancement
         if let window = ScreenshotOptions.window {
             uiState.selectedWindow = window

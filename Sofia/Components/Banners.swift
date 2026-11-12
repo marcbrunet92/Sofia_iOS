@@ -68,3 +68,13 @@ struct WarningBanner: View {
             .sofiaCard(SofiaColors.yellow)
     }
 }
+
+/// HorizontalDivider Material 3.
+struct SofiaDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(SofiaColors.outlineVariant)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity)
+    }
+}

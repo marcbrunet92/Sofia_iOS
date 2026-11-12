@@ -40,17 +40,28 @@ struct RemitDetailScreen: View {
                     )
                 }
 
-                if group.notices.count > 1 {
-                    DetailCard {
-                        ForEach(group.notices) { notice in
-                            DetailRow(
-                                label: L10n.format("remit_unit_format", unitNumber(notice.bmuId)),
-                                value: AlertFormat.availabilityText(
-                                    available: notice.effectiveAvailableMw,
-                                    normal: notice.normalCapacityMw
+                // Une ligne par unité, qui ouvre l'avis REMIT complet de l'unité
+                DetailCard {
+                    Text("remit_notices_title")
+                        .font(SofiaType.titleSmall)
+                    ForEach(group.notices) { notice in
+                        NavigationLink(value: AlertRoute.notice(notice.id)) {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                DetailRow(
+                                    label: L10n.format("remit_unit_format", unitNumber(notice.bmuId)),
+                                    value: AlertFormat.availabilityText(
+                                        available: notice.effectiveAvailableMw,
+                                        normal: notice.normalCapacityMw
+                                    )
                                 )
-                            )
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(SofiaColors.onSurfaceVariant)
+                            }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(Text("remit_open_notice"))
                     }
                 }
 

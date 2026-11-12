@@ -389,7 +389,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MZL4WMJSYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sofia Wind Farm";
+				INFOPLIST_KEY_CFBundleDisplayName = "North Sea windfarm";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -428,7 +428,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MZL4WMJSYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sofia Wind Farm";
+				INFOPLIST_KEY_CFBundleDisplayName = "North Sea windfarm";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -467,7 +467,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MZL4WMJSYA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Sofia;
+				INFOPLIST_KEY_CFBundleDisplayName = "North Sea windfarm";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -502,7 +502,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MZL4WMJSYA;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Sofia;
+				INFOPLIST_KEY_CFBundleDisplayName = "North Sea windfarm";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

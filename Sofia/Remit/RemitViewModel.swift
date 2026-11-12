@@ -20,6 +20,9 @@ final class RemitViewModel {
 
     private let repository: SofiaRemitRepository
 
+    /// Appelé quand les alertes affichées changent (reprogrammation des rappels).
+    @ObservationIgnored var onSectionsChanged: ((RemitSections) -> Void)?
+
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var observeTask: Task<Void, Never>?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
@@ -63,6 +66,7 @@ final class RemitViewModel {
         state.isLoading = false
         state.isRefreshing = false
         uiState = state
+        onSectionsChanged?(state.sections)
     }
 
     @discardableResult

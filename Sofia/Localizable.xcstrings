@@ -7,7 +7,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia Wind Farm follows the output of the Sofia offshore wind farm in near real time: production announced by the operator, metered production, the capacity it can export, wind at the site, the planned availability for the next 14 days and the official outage notices."
+            "value" : "North Sea windfarm follows the output of the Sofia offshore wind farm in near real time: production announced by the operator, metered production, the capacity it can export, wind at the site, the planned availability for the next 14 days and the official outage notices."
           }
         }
       }
@@ -155,13 +155,24 @@
         }
       }
     },
+    "action_share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share"
+          }
+        }
+      }
+    },
     "app_name" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia Wind Farm"
+            "value" : "North Sea windfarm"
           }
         }
       }
@@ -452,6 +463,17 @@
         }
       }
     },
+    "gb_detail_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Great Britain wind"
+          }
+        }
+      }
+    },
     "gb_empty" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -496,6 +518,28 @@
         }
       }
     },
+    "gb_share_all_wind_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of all GB wind (offshore + onshore)"
+          }
+        }
+      }
+    },
+    "gb_share_caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "committed ÷ GB offshore"
+          }
+        }
+      }
+    },
     "gb_share_label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -503,6 +547,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia vs UK actual wind power generation"
+          }
+        }
+      }
+    },
+    "gb_share_offshore_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia share of GB offshore"
           }
         }
       }
@@ -573,6 +628,28 @@
         }
       }
     },
+    "reminder_end_title_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outage ended: %1$@"
+          }
+        }
+      }
+    },
+    "reminder_start_title_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outage starting: %1$@"
+          }
+        }
+      }
+    },
     "remit_all_units" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -628,6 +705,50 @@
         }
       }
     },
+    "remit_capacity_available" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available"
+          }
+        }
+      }
+    },
+    "remit_capacity_unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
+    "remit_detail_asset" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asset"
+          }
+        }
+      }
+    },
+    "remit_detail_asset_section" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asset"
+          }
+        }
+      }
+    },
     "remit_detail_available" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -635,6 +756,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Capacity"
+          }
+        }
+      }
+    },
+    "remit_detail_bmu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BMU"
+          }
+        }
+      }
+    },
+    "remit_detail_capacities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacities"
+          }
+        }
+      }
+    },
+    "remit_detail_cause" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cause"
+          }
+        }
+      }
+    },
+    "remit_detail_dates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dates"
           }
         }
       }
@@ -650,6 +815,61 @@
         }
       }
     },
+    "remit_detail_mrid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MRID"
+          }
+        }
+      }
+    },
+    "remit_detail_normal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Normal"
+          }
+        }
+      }
+    },
+    "remit_detail_outage_profile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outage profile"
+          }
+        }
+      }
+    },
+    "remit_detail_participant" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Participant"
+          }
+        }
+      }
+    },
+    "remit_detail_published" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Published"
+          }
+        }
+      }
+    },
     "remit_detail_related_info" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -657,6 +877,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Additional information"
+          }
+        }
+      }
+    },
+    "remit_detail_revision" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revision"
           }
         }
       }
@@ -747,6 +978,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "no end date"
+          }
+        }
+      }
+    },
+    "remit_notices_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMIT notices"
+          }
+        }
+      }
+    },
+    "remit_open_notice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the full REMIT notice"
           }
         }
       }
@@ -872,13 +1125,90 @@
         }
       }
     },
+    "settings_about_row" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About, data sources and disclaimer"
+          }
+        }
+      }
+    },
+    "settings_appearance_dark" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "settings_appearance_light" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "settings_appearance_system" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        }
+      }
+    },
+    "settings_appearance_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "settings_default_window_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shown by the chart when the app opens."
+          }
+        }
+      }
+    },
+    "settings_default_window_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default period"
+          }
+        }
+      }
+    },
     "settings_disclaimer_description" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sofia Wind Farm is an independent app. It is not affiliated with, endorsed or sponsored by RWE, the Sofia offshore wind farm, Elexon or Open-Meteo. Figures are for information only and may be delayed or revised."
+            "value" : "North Sea windfarm is an independent app. It is not affiliated with, endorsed or sponsored by RWE, the Sofia offshore wind farm, Elexon or Open-Meteo. Figures are for information only and may be delayed or revised."
           }
         }
       }
@@ -894,24 +1224,112 @@
         }
       }
     },
-    "settings_test_mode_description" : {
+    "settings_display_title" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use T_HEYM11 instead of the live Sofia aggregate. This setting is persisted locally."
+            "value" : "Display"
           }
         }
       }
     },
-    "settings_test_mode_title" : {
+    "settings_link_web" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Test mode"
+            "value" : "Web version"
+          }
+        }
+      }
+    },
+    "settings_notifications_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        }
+      }
+    },
+    "settings_open_ios_settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "settings_reminders_denied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications are turned off for this app in iOS Settings."
+          }
+        }
+      }
+    },
+    "settings_reminders_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A notification when an announced outage starts and when it ends."
+          }
+        }
+      }
+    },
+    "settings_reminders_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outage reminders"
+          }
+        }
+      }
+    },
+    "settings_wind_unit_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used by the chart and the statistics."
+          }
+        }
+      }
+    },
+    "settings_wind_unit_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wind speed unit"
+          }
+        }
+      }
+    },
+    "share_production_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofia offshore wind farm: %1$ld MW committed (%2$ld%% of %3$ld MW), data from %4$@."
           }
         }
       }
@@ -960,6 +1378,347 @@
         }
       }
     },
+    "stats_average_caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mean over the period"
+          }
+        }
+      }
+    },
+    "stats_average_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average output"
+          }
+        }
+      }
+    },
+    "stats_capacity_factor_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity factor"
+          }
+        }
+      }
+    },
+    "stats_curve_axis_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wind speed at 120 m (%1$@)"
+          }
+        }
+      }
+    },
+    "stats_curve_empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough data for this period."
+          }
+        }
+      }
+    },
+    "stats_curve_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average committed output over the period"
+          }
+        }
+      }
+    },
+    "stats_curve_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Output by wind speed"
+          }
+        }
+      }
+    },
+    "stats_daily_estimated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated from committed"
+          }
+        }
+      }
+    },
+    "stats_daily_metered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metered (B1610)"
+          }
+        }
+      }
+    },
+    "stats_daily_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 30 days, in GWh"
+          }
+        }
+      }
+    },
+    "stats_daily_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy per day"
+          }
+        }
+      }
+    },
+    "stats_empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No data for this period yet."
+          }
+        }
+      }
+    },
+    "stats_energy_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy"
+          }
+        }
+      }
+    },
+    "stats_footnote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Committed output (PN) is announced by the operator for each half-hour; metered values (B1610) arrive about 6 days later. Equivalent homes: the average output sustained for a year, divided by the typical consumption of a UK household (2,700 kWh, Ofgem)."
+          }
+        }
+      }
+    },
+    "stats_generating_caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "half-hours above 0 MW"
+          }
+        }
+      }
+    },
+    "stats_generating_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time generating"
+          }
+        }
+      }
+    },
+    "stats_gwh_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ GWh"
+          }
+        }
+      }
+    },
+    "stats_homes_caption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "at 2,700 kWh per home per year"
+          }
+        }
+      }
+    },
+    "stats_homes_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equivalent homes"
+          }
+        }
+      }
+    },
+    "stats_hours_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "over %1$@ h of data"
+          }
+        }
+      }
+    },
+    "stats_mwh_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ MWh"
+          }
+        }
+      }
+    },
+    "stats_of_capacity_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "of %1$ld MW installed"
+          }
+        }
+      }
+    },
+    "stats_peak_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peak output"
+          }
+        }
+      }
+    },
+    "stats_percent_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$ld%%"
+          }
+        }
+      }
+    },
+    "stats_records_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highest committed output"
+          }
+        }
+      }
+    },
+    "stats_records_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records"
+          }
+        }
+      }
+    },
+    "stats_summary_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Based on committed output (PN)"
+          }
+        }
+      }
+    },
+    "stats_summary_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Period summary"
+          }
+        }
+      }
+    },
+    "stats_unit_output_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$ld / %2$ld MW"
+          }
+        }
+      }
+    },
+    "stats_units_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latest committed output"
+          }
+        }
+      }
+    },
+    "stats_units_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Output by unit"
+          }
+        }
+      }
+    },
     "tab_graph" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1004,13 +1763,13 @@
         }
       }
     },
-    "test_mode_warning" : {
+    "tab_stats" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TEST MODE — displaying T_HEYM11 only"
+            "value" : "Stats"
           }
         }
       }
@@ -1308,6 +2067,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofia Live Generation"
+          }
+        }
+      }
+    },
+    "title_stats" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statistics"
           }
         }
       }

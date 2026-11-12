@@ -6,7 +6,8 @@ struct TabItem {
 }
 
 /// FloatingTabBar.kt : barre d'onglets flottante, pilule translucide posée au-dessus du contenu,
-/// qui défile dessous.
+/// qui défile dessous. Au-delà de trois onglets, seul l'onglet sélectionné affiche son libellé
+/// pour que la barre tienne sur un iPhone étroit.
 struct FloatingTabBar: View {
     let items: [TabItem]
     let selectedIndex: Int
@@ -17,25 +18,29 @@ struct FloatingTabBar: View {
             ForEach(items.indices, id: \.self) { index in
                 let item = items[index]
                 let selected = index == selectedIndex
+                let showsLabel = selected || items.count <= 3
                 Button {
                     onSelect(index)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: item.systemImage)
                             .font(.system(size: 18, weight: .semibold))
-                        Text(LocalizedStringKey(item.labelKey))
-                            .font(SofiaType.labelLarge)
-                            .fontWeight(selected ? .semibold : .medium)
-                            .lineLimit(1)
-                            .fixedSize()
+                        if showsLabel {
+                            Text(LocalizedStringKey(item.labelKey))
+                                .font(SofiaType.labelLarge)
+                                .fontWeight(selected ? .semibold : .medium)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
                     }
                     .foregroundStyle(selected ? SofiaColors.primary : SofiaColors.onSurfaceVariant)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, items.count <= 3 ? 20 : 14)
                     .padding(.vertical, 12)
                     .background(selected ? SofiaColors.primary.opacity(0.16) : Color.clear, in: Capsule())
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(LocalizedStringKey(item.labelKey)))
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }

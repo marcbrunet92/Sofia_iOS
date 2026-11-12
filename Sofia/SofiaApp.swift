@@ -3,25 +3,43 @@ import SwiftUI
 import WidgetKit
 import SofiaCore
 
-/// Point d'entrée (équivalent de MainActivity.kt) : construit les repositories et les view models.
+/// Point d'entrée (équivalent de MainActivity.kt) : construit les réglages, les repositories et
+/// les view models.
 @main
 struct SofiaApp: App {
+    @State private var settings: AppSettings
     @State private var graphViewModel: GraphViewModel
     @State private var remitViewModel: RemitViewModel
+    @State private var statsViewModel: StatsViewModel
 
     init() {
         let api = SofiaApiService.shared
         let store = SofiaLocalStore.shared
+        let settings = AppSettings()
 
-        _remitViewModel = State(initialValue: RemitViewModel(
+        let remitViewModel = RemitViewModel(
             repository: SofiaRemitRepository(api: api, store: store)
-        ))
+        )
+        // Les rappels suivent les alertes : reprogrammés à chaque mise à jour
+        remitViewModel.onSectionsChanged = { sections in
+            let enabled = settings.outageReminders
+            Task {
+                await AlertReminders.sync(sections: sections, enabled: enabled)
+            }
+        }
+
+        _settings = State(initialValue: settings)
+        _remitViewModel = State(initialValue: remitViewModel)
         _graphViewModel = State(initialValue: GraphViewModel(
             productionRepository: SofiaProductionRepository(api: api, store: store),
             b1610Repository: SofiaB1610Repository(api: api, store: store),
             weatherRepository: SofiaWeatherRepository(api: api, store: store),
             melRepository: SofiaMelRepository(api: api, store: store),
-            contextRepository: SofiaContextRepository(api: api, store: store)
+            contextRepository: SofiaContextRepository(api: api, store: store),
+            initialWindow: settings.defaultWindow
+        ))
+        _statsViewModel = State(initialValue: StatsViewModel(
+            unitsRepository: SofiaUnitsRepository(api: api)
         ))
 
         WidgetCenter.shared.reloadAllTimelines()
@@ -29,7 +47,12 @@ struct SofiaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            SofiaRootView(graphViewModel: graphViewModel, remitViewModel: remitViewModel)
+            SofiaRootView(
+                settings: settings,
+                graphViewModel: graphViewModel,
+                remitViewModel: remitViewModel,
+                statsViewModel: statsViewModel
+            )
         }
     }
 }
@@ -37,43 +60,74 @@ struct SofiaApp: App {
 private enum AppTab: Int, CaseIterable, Hashable {
     case graph
     case remit
+    case stats
+    case settings
 
     var item: TabItem {
         switch self {
         case .graph: return TabItem(labelKey: "tab_graph", systemImage: "chart.xyaxis.line")
         case .remit: return TabItem(labelKey: "tab_remit", systemImage: "exclamationmark.triangle.fill")
+        case .stats: return TabItem(labelKey: "tab_stats", systemImage: "chart.bar.fill")
+        case .settings: return TabItem(labelKey: "tab_settings", systemImage: "gearshape.fill")
         }
     }
+}
+
+/// Écrans ouverts par-dessus les onglets.
+nonisolated enum AlertRoute: Hashable {
+    /// Détail d'une alerte : identifiant du groupe d'avis.
+    case group(String)
+    /// Avis REMIT complet d'une unité : identifiant de l'avis.
+    case notice(Int)
 }
 
 /// Place réservée sous le contenu pour qu'il défile au-delà de la barre flottante.
 private let tabBarSpace: CGFloat = 88
 
-/// Équivalent de ui/SofiaApp.kt : les onglets Graphique et Alertes, qu'on fait défiler d'un
-/// balayage, sous une barre d'onglets flottante masquée sur le détail d'une alerte.
+/// Les onglets Graphique, Alertes, Statistiques et Réglages, qu'on fait défiler d'un balayage,
+/// sous une barre d'onglets flottante masquée sur le détail d'une alerte.
 struct SofiaRootView: View {
+    let settings: AppSettings
     let graphViewModel: GraphViewModel
     let remitViewModel: RemitViewModel
+    let statsViewModel: StatsViewModel
 
     /// Hors de la pile de navigation : l'onglet courant est conservé à l'aller-retour vers un détail.
     @State private var selectedTab: AppTab = ScreenshotOptions.opensAlertsTab ? .remit : .graph
-    /// Route RemitDetail(key) : identifiant du groupe d'alertes ouvert.
-    @State private var path: [String] = []
+    /// Détail d'alerte puis avis d'unité ouverts.
+    @State private var path: [AlertRoute] = []
     @State private var showsAbout = false
+    /// Rappels demandés mais notifications refusées dans les réglages d'iOS.
+    @State private var notificationsDenied = false
 
     var body: some View {
         NavigationStack(path: $path) {
             TabView(selection: $selectedTab) {
-                GraphPage(viewModel: graphViewModel, onShowAbout: { showsAbout = true })
+                GraphPage(viewModel: graphViewModel, settings: settings, onShowAbout: { showsAbout = true })
                     .tag(AppTab.graph)
-                RemitPage(viewModel: remitViewModel, onOpenAlert: { key in path.append(key) })
+                RemitPage(viewModel: remitViewModel, onOpenAlert: { key in path.append(.group(key)) })
                     .tag(AppTab.remit)
+                StatsPage(viewModel: statsViewModel, graphViewModel: graphViewModel, settings: settings)
+                    .tag(AppTab.stats)
+                SettingsScreen(
+                    settings: settings,
+                    notificationsDenied: notificationsDenied,
+                    bottomInset: tabBarSpace,
+                    onSetReminders: { enabled in setReminders(enabled) },
+                    onShowAbout: { showsAbout = true }
+                )
+                .tag(AppTab.settings)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .background(SofiaColors.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: String.self) { key in
-                RemitDetailRoute(viewModel: remitViewModel, key: key)
+            .navigationDestination(for: AlertRoute.self) { route in
+                switch route {
+                case .group(let key):
+                    RemitDetailRoute(viewModel: remitViewModel, key: key)
+                case .notice(let id):
+                    RemitNoticeRoute(viewModel: remitViewModel, id: id)
+                }
             }
         }
         .overlay(alignment: .bottom) {
@@ -91,12 +145,31 @@ struct SofiaRootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: path.isEmpty)
         .tint(SofiaColors.primary)
+        .preferredColorScheme(settings.appearance.colorScheme)
         .sheet(isPresented: $showsAbout) {
             AboutScreen()
+                .preferredColorScheme(settings.appearance.colorScheme)
         }
         .task {
+            // Rappels activés lors d'un lancement précédent, puis notifications coupées dans iOS
+            if settings.outageReminders {
+                notificationsDenied = await AlertReminders.isDenied()
+            }
             await openFirstAlertForScreenshot()
             await playDemoTour()
+        }
+    }
+
+    /// Active ou coupe les rappels : demande l'autorisation d'iOS, puis (re)programme les rappels.
+    private func setReminders(_ enabled: Bool) {
+        Task {
+            var granted = false
+            if enabled {
+                granted = await AlertReminders.requestAuthorization()
+            }
+            notificationsDenied = enabled && !granted
+            settings.setOutageReminders(granted)
+            await AlertReminders.sync(sections: remitViewModel.uiState.sections, enabled: granted)
         }
     }
 
@@ -133,7 +206,7 @@ struct SofiaRootView: View {
         await pause(4)
         let sections = remitViewModel.uiState.sections
         if let first = (sections.current + sections.upcoming).first {
-            path = [first.id]
+            path = [.group(first.id)]
             await pause(5)
             path = []
             await pause(2)
@@ -147,7 +220,7 @@ struct SofiaRootView: View {
         for _ in 0..<120 {
             let sections = remitViewModel.uiState.sections
             if let first = (sections.current + sections.upcoming).first {
-                path = [first.id]
+                path = [.group(first.id)]
                 return
             }
             try? await Task.sleep(for: .milliseconds(250))
@@ -157,11 +230,13 @@ struct SofiaRootView: View {
 
 private struct GraphPage: View {
     let viewModel: GraphViewModel
+    let settings: AppSettings
     let onShowAbout: () -> Void
 
     var body: some View {
         GraphScreen(
             state: viewModel.uiState,
+            windUnit: settings.windUnit,
             bottomInset: tabBarSpace,
             onRefresh: { await viewModel.refresh().value },
             onSelectWindow: { viewModel.selectWindow($0) },
@@ -198,6 +273,45 @@ private struct RemitDetailRoute: View {
             RemitDetailScreen(group: group)
         } else {
             // Alerte terminée ou passée « en cours » depuis l'ouverture : on garde le bouton retour
+            SofiaColors.background
+                .ignoresSafeArea()
+                .toolbar(.visible, for: .navigationBar)
+        }
+    }
+}
+
+private struct StatsPage: View {
+    let viewModel: StatsViewModel
+    let graphViewModel: GraphViewModel
+    let settings: AppSettings
+
+    var body: some View {
+        StatsScreen(
+            graph: graphViewModel.uiState,
+            state: viewModel.uiState,
+            windUnit: settings.windUnit,
+            bottomInset: tabBarSpace,
+            onRefresh: {
+                // Les séries du graphique et la production par unité, en parallèle
+                let units = viewModel.refresh()
+                await graphViewModel.refresh().value
+                await units.value
+            },
+            onSelectPeriod: { viewModel.selectPeriod($0) }
+        )
+    }
+}
+
+/// Avis REMIT complet d'une unité, retrouvé par son identifiant dans les avis en cache.
+private struct RemitNoticeRoute: View {
+    let viewModel: RemitViewModel
+    let id: Int
+
+    var body: some View {
+        if let notice = viewModel.uiState.remits.first(where: { $0.id == id }) {
+            RemitNoticeDetailScreen(notice: notice)
+        } else {
+            // Avis retiré depuis l'ouverture : on garde le bouton retour
             SofiaColors.background
                 .ignoresSafeArea()
                 .toolbar(.visible, for: .navigationBar)
