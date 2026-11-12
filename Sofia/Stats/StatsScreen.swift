@@ -26,11 +26,23 @@ struct StatsScreen: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 PullToRefreshContainer(isRefreshing: graph.isRefreshing, onRefresh: onRefresh) {
-                    content
+                    ScrollViewReader { proxy in
+                        content
+                            // Relancé quand la production par unité arrive (carte « units »)
+                            .task(id: state.unitOutputs.isEmpty) { await scrollForScreenshot(proxy) }
+                    }
                 }
             }
         }
         .foregroundStyle(SofiaColors.onSurface)
+    }
+
+    /// Captures d'écran de l'App Store : amène la carte demandée en haut de l'écran, une fois les
+    /// cartes au-dessus mises en page.
+    private func scrollForScreenshot(_ proxy: ScrollViewProxy) async {
+        guard let section = ScreenshotOptions.statsSection else { return }
+        try? await Task.sleep(for: .seconds(1))
+        proxy.scrollTo(section, anchor: .top)
     }
 
     private var content: some View {
@@ -45,6 +57,7 @@ struct StatsScreen: View {
             )
             NextDaysCard(days: graph.uouDays, capacityMw: SofiaConstants.maxCapacityMw)
             RecordsCard(top: calculateTopWindows(graph.pnPoints, now: now))
+                .id("records")
             PowerCurveCard(
                 bins: powerCurve(
                     pnMw: graph.pnPoints,
@@ -54,10 +67,13 @@ struct StatsScreen: View {
                 ),
                 windUnit: windUnit
             )
+            .id("curve")
             if !state.unitOutputs.isEmpty {
                 UnitOutputsCard(outputs: state.unitOutputs)
+                    .id("units")
             }
             GbContextDetailCard(context: graph.gbContext, pnPoints: graph.pnPoints)
+                .id("gb")
             Text("stats_footnote")
                 .font(SofiaType.bodySmall)
                 .foregroundStyle(SofiaColors.onSurfaceVariant)

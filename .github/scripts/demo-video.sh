@@ -2,7 +2,8 @@
 # Vidéo de démonstration pour l'App Review : sur un simulateur iPhone, on filme l'écran
 # d'accueil, le lancement de l'app, puis le parcours automatique joué par l'app elle-même
 # (-SofiaDemoTour YES, voir playDemoTour dans Sofia/SofiaApp.swift) : fenêtres de temps,
-# jeux de données, feuille « À propos », onglet Alertes et détail d'une alerte.
+# jeux de données, feuille « À propos », onglet Alertes, détail d'une alerte et avis REMIT
+# d'une unité, onglet Statistiques (périodes 24 h, 1 mois, tout) et onglet Réglages.
 #
 # Apple demande une vidéo filmée sur un appareil physique : celle-ci sert d'aperçu et de
 # script à reproduire sur l'iPhone.
@@ -13,8 +14,8 @@ set -euo pipefail
 APP="$1"
 OUT="$2"
 BUNDLE_ID="com.lemarc.Sofia"
-# Durée du parcours (environ 50 s) plus une marge pour le chargement des données
-DURATION="${DURATION:-75}"
+# Durée du parcours (environ 75 s) plus une marge pour le chargement des données
+DURATION="${DURATION:-100}"
 
 log() {
     echo "[$(date -u +%H:%M:%S)] $*"

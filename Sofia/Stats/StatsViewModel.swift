@@ -21,6 +21,10 @@ final class StatsViewModel {
 
     init(unitsRepository: SofiaUnitsRepository) {
         self.unitsRepository = unitsRepository
+        // Captures d'écran de l'App Store : période demandée au lancement
+        if let period = ScreenshotOptions.statsPeriod {
+            uiState.period = period
+        }
 
         refresh()
 

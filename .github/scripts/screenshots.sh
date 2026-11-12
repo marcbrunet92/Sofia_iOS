@@ -1,6 +1,7 @@
 #!/bin/bash
 # Captures d'écran pour l'App Store : 10 sur iPhone 6,3" (1206 × 2622) et 10 sur iPad 13"
-# (2064 × 2752), en clair et en sombre, avec les vraies données du serveur.
+# (2064 × 2752), en clair et en sombre, avec les vraies données du serveur : Graphique, Alertes,
+# détail d'une alerte, avis REMIT d'une unité, Statistiques, Réglages et À propos.
 #
 # Usage : .github/scripts/screenshots.sh <chemin de Sofia.app (build simulateur)> <dossier de sortie>
 #
@@ -14,17 +15,20 @@ BUNDLE_ID="com.lemarc.Sofia"
 SETTLE="${SETTLE:-15}"
 
 # Libellé | apparence | arguments de lancement
+# App Store Connect accepte 10 captures par taille d'écran : chaque écran de l'app y figure une fois
+# (Graphique, Alertes, détail d'une alerte, avis REMIT d'une unité, Statistiques, Réglages,
+# À propos), les autres variantes alternent clair et sombre.
 SHOTS=(
     "graph-1m|light|"
-    "graph-24h-wind|light|-SofiaScreenshotWindow HOURS_24 -SofiaScreenshotDatasets pn,weather"
-    "graph-6m|light|-SofiaScreenshotWindow MONTH_6 -SofiaScreenshotDatasets pn,b1610"
+    "graph-24h-wind|dark|-SofiaScreenshotWindow HOURS_24 -SofiaScreenshotDatasets pn,weather"
     "alerts|light|-SofiaScreenshotTab remit"
     "alert-detail|light|-SofiaScreenshotTab remit -SofiaScreenshotDetail YES"
-    "graph-1m|dark|"
-    "graph-1w-wind|dark|-SofiaScreenshotWindow DAYS_7 -SofiaScreenshotDatasets pn,weather"
-    "graph-all|dark|-SofiaScreenshotWindow ALL -SofiaScreenshotDatasets b1610"
-    "alerts|dark|-SofiaScreenshotTab remit"
-    "alert-detail|dark|-SofiaScreenshotTab remit -SofiaScreenshotDetail YES"
+    "remit-notice|dark|-SofiaScreenshotTab remit -SofiaScreenshotNotice YES"
+    "stats-week|light|-SofiaScreenshotTab stats -SofiaScreenshotStatsPeriod WEEK"
+    "stats-wind-curve|dark|-SofiaScreenshotTab stats -SofiaScreenshotStatsPeriod ALL -SofiaScreenshotStatsSection curve"
+    "stats-records|light|-SofiaScreenshotTab stats -SofiaScreenshotStatsPeriod MONTH -SofiaScreenshotStatsSection records"
+    "settings|dark|-SofiaScreenshotTab settings"
+    "about|light|-SofiaScreenshotAbout YES"
 )
 
 # Horodatage, pour voir quelle étape prend du temps

@@ -93,10 +93,10 @@ struct SofiaRootView: View {
     let statsViewModel: StatsViewModel
 
     /// Hors de la pile de navigation : l'onglet courant est conservé à l'aller-retour vers un détail.
-    @State private var selectedTab: AppTab = ScreenshotOptions.opensAlertsTab ? .remit : .graph
+    @State private var selectedTab: AppTab = Self.screenshotTab
     /// Détail d'alerte puis avis d'unité ouverts.
     @State private var path: [AlertRoute] = []
-    @State private var showsAbout = false
+    @State private var showsAbout = ScreenshotOptions.showsAbout
     /// Rappels demandés mais notifications refusées dans les réglages d'iOS.
     @State private var notificationsDenied = false
 
@@ -208,19 +208,46 @@ struct SofiaRootView: View {
         if let first = (sections.current + sections.upcoming).first {
             path = [.group(first.id)]
             await pause(5)
+            // Avis REMIT complet de la première unité
+            path = [.group(first.id), .notice(first.first.id)]
+            await pause(5)
             path = []
             await pause(2)
         }
+
+        withAnimation { selectedTab = .stats }
+        await pause(4)
+        for period in [StatsPeriod.day, .month, .all] {
+            withAnimation { statsViewModel.selectPeriod(period) }
+            await pause(3)
+        }
+        withAnimation { statsViewModel.selectPeriod(.week) }
+
+        withAnimation { selectedTab = .settings }
+        await pause(4)
         withAnimation { selectedTab = .graph }
     }
 
-    /// Captures d'écran de l'App Store : ouvre la première alerte dès que la liste est chargée.
+    /// Captures d'écran de l'App Store : onglet demandé au lancement.
+    private static var screenshotTab: AppTab {
+        switch ScreenshotOptions.tab {
+        case "remit": return .remit
+        case "stats": return .stats
+        case "settings": return .settings
+        default: return .graph
+        }
+    }
+
+    /// Captures d'écran de l'App Store : ouvre la première alerte (et l'avis de sa première unité)
+    /// dès que la liste est chargée.
     private func openFirstAlertForScreenshot() async {
-        guard ScreenshotOptions.opensFirstAlert else { return }
+        guard ScreenshotOptions.opensFirstAlert || ScreenshotOptions.opensFirstNotice else { return }
         for _ in 0..<120 {
             let sections = remitViewModel.uiState.sections
             if let first = (sections.current + sections.upcoming).first {
-                path = [.group(first.id)]
+                path = ScreenshotOptions.opensFirstNotice
+                    ? [.group(first.id), .notice(first.first.id)]
+                    : [.group(first.id)]
                 return
             }
             try? await Task.sleep(for: .milliseconds(250))
